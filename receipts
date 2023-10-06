@@ -1,5 +1,7 @@
-#!/usr/bin/bash
+#!/usr/bin/bash -xe
+
 TARGET="cook"
+
 build:
 	go build -o ./bin/${TARGET}
 
