@@ -6,21 +6,17 @@ import (
 	"io"
 	"log"
 	"os"
-	"os/exec"
 	"regexp"
 	"strings"
 )
 
-const (
-	RootScope = "root"
-)
-
-var receiptNameRegExp, receiptNameRegExpError = regexp.Compile(`^[A-Za-z][0-9A-Za-z\t _-]*:$`)
-var scopeIdentRegExp, scopeIdentRegExpError = regexp.Compile(`^([ \t]+)`)
-
 type StringWriteCloser interface {
 	Write(line string) (int, error)
 	io.Closer
+}
+
+type StringWriter interface {
+	Write(line string) error
 }
 
 type StdWriteCloser struct{}
@@ -33,141 +29,95 @@ func (StdWriteCloser) Close() error {
 	return nil
 }
 
-type CmdWriteCloser struct {
-	cmd       *exec.Cmd
-	stdInPipe io.WriteCloser
-}
+const (
+	rootScope = ":root:"
+)
 
-func (o *CmdWriteCloser) Write(line string) (int, error) {
-	return o.stdInPipe.Write([]byte(line + "\n"))
-}
+var receiptNameRegExp, receiptNameRegExpError = regexp.Compile(`^[A-Za-z][0-9A-Za-z\t _-]*:$`)
+var scopeIdentRegExp, scopeIdentRegExpError = regexp.Compile(`^([ \t]+)`)
 
-func (o *CmdWriteCloser) Close() error {
-	err := o.stdInPipe.Close()
-	if err != nil {
-		return err
-	}
-	return o.cmd.Wait()
-}
-
-type ScopedWriteCloser struct {
-	currentScope            string
+type ScopedStringWriter struct {
 	targetScope             string
+	currentScope            string
 	shouldDefineScopeIndent bool
-	currentScopeIndent      string
-	out                     StringWriteCloser
+	currentScopeIndentation string
+	lines                   []string
 }
 
-type ScopedWriteCloserScopeChangedError struct {
-	scopedWriteCloser *ScopedWriteCloser
+type ScopedStringWriterDoneError struct{}
+
+func (e ScopedStringWriterDoneError) Error() string {
+	return "done"
 }
 
-func (e ScopedWriteCloserScopeChangedError) Error() string {
-	return e.scopedWriteCloser.currentScope
+func (r *ScopedStringWriter) setScope(line string) {
+	r.currentScope = line[:len(line)-1]
+	r.shouldDefineScopeIndent = true
 }
 
-type ScopedWriteCloserScopeMismatchError struct {
-	scopedWriteCloser *ScopedWriteCloser
-}
-
-func (e ScopedWriteCloserScopeMismatchError) Error() string {
-	return e.scopedWriteCloser.currentScope
-}
-
-func (o *ScopedWriteCloser) writeScopedLine(line string) (int, error) {
-	if o.currentScope == o.targetScope {
-		return o.out.Write(strings.TrimPrefix(line, o.currentScopeIndent))
+func (r *ScopedStringWriter) switchScope(line string) error {
+	if r.currentScope == r.targetScope {
+		return &ScopedStringWriterDoneError{}
 	}
-	return 0, &ScopedWriteCloserScopeMismatchError{
-		scopedWriteCloser: o,
-	}
-}
-
-func (o *ScopedWriteCloser) scopeChanged(line string) (int, error) {
 	if receiptNameRegExp.MatchString(line) {
-		o.currentScope = line[:len(line)-1]
-		o.shouldDefineScopeIndent = true
+		r.setScope(line)
 	} else {
-		o.currentScope = RootScope
+		r.currentScope = rootScope
 	}
-	return 0, &ScopedWriteCloserScopeChangedError{
-		scopedWriteCloser: o,
+	return nil
+}
+
+func (r *ScopedStringWriter) appendScopedLine(line string) {
+	if r.targetScope == r.currentScope {
+		r.lines = append(r.lines, strings.TrimPrefix(line, r.currentScopeIndentation))
 	}
 }
 
-func (o *ScopedWriteCloser) Write(line string) (int, error) {
-	if o.currentScope == RootScope {
+func (r *ScopedStringWriter) Write(line string) error {
+	if r.currentScope == rootScope {
 		if receiptNameRegExp.MatchString(line) {
-			o.currentScope = line[:len(line)-1]
-			o.shouldDefineScopeIndent = true
-			return 0, &ScopedWriteCloserScopeChangedError{
-				scopedWriteCloser: o,
-			}
+			r.setScope(line)
+		} else {
+			r.lines = append(r.lines, line)
 		}
-		return o.out.Write(line)
-	}
-	// o.currentScope != RootScope
-	if o.shouldDefineScopeIndent {
-		o.shouldDefineScopeIndent = false
-		matches := scopeIdentRegExp.FindStringSubmatch(line)
-		if len(matches) == 2 {
-			o.currentScopeIndent = matches[1]
-			return o.writeScopedLine(line)
-		}
-		return o.scopeChanged(line)
-	}
-	if strings.HasPrefix(line, o.currentScopeIndent) {
-		return o.writeScopedLine(line)
-	}
-	return o.scopeChanged(line)
-}
-
-func makeOutput(line string) (StringWriteCloser, error) {
-	if strings.HasPrefix(line, "#!") {
-		parts := strings.Fields(line)
-		cmd := exec.Command(parts[0], parts[1:]...)
-		cmd.Stdin = os.Stdin
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		cmd.Start()
-		stdInPipe, err := cmd.StdinPipe()
-		if err != nil {
-			return nil, err
-		}
-		return &CmdWriteCloser{
-			cmd:       cmd,
-			stdInPipe: stdInPipe,
-		}, nil
 	} else {
-		return &StdWriteCloser{}, nil
-	}
-}
-
-type AppState struct {
-	targetReceipt          string
-	currentReceiptIsTarget bool
-}
-
-func (s *AppState) isCookingDone(err error) bool {
-	if err != nil {
-		switch err.(type) {
-		case ScopedWriteCloserScopeChangedError:
-			if s.currentReceiptIsTarget {
-				return true
+		if r.shouldDefineScopeIndent {
+			r.shouldDefineScopeIndent = false
+			matches := scopeIdentRegExp.FindStringSubmatch(line)
+			if len(matches) == 2 {
+				r.currentScopeIndentation = matches[1]
+				r.appendScopedLine(line)
+			} else if err := r.switchScope(line); err != nil {
+				return err
 			}
-			s.currentReceiptIsTarget = s.targetReceipt == err.Error()
-		case ScopedWriteCloserScopeMismatchError:
-			return false
-		default:
-			log.Fatal(err)
+		} else {
+			if strings.HasPrefix(line, r.currentScopeIndentation) {
+				r.appendScopedLine(line)
+			} else if err := r.switchScope(line); err != nil {
+				return err
+			}
 		}
 	}
-	return false
+	return nil
+}
+
+func collectScopeStrings(scanner *bufio.Scanner, writer *ScopedStringWriter) (bool, error) {
+	for scanner.Scan() {
+		if err := (*writer).Write(scanner.Text()); err != nil {
+			switch err.(type) {
+			case ScopedStringWriterDoneError:
+				return true, nil
+			default:
+				return false, err
+			}
+		}
+	}
+	return false, scanner.Err()
 }
 
 func main() {
-	if receiptNameRegExpError != nil {
-		log.Fatal(receiptNameRegExpError)
+	if len(os.Args) < 2 {
+		log.Fatal("No receipt provided")
 	}
 	file, err := os.Open("receipts")
 	if err != nil {
@@ -175,34 +125,22 @@ func main() {
 	}
 	defer file.Close()
 	scanner := bufio.NewScanner(file)
-	if !scanner.Scan() {
-		log.Fatal("No receipt found")
+	linesCollector := &ScopedStringWriter{
+		targetScope:  os.Args[1],
+		currentScope: rootScope,
 	}
-	var line = scanner.Text()
-	var output StringWriteCloser
-	output, err = makeOutput(line)
+	isReceiptFounded, err := collectScopeStrings(scanner, linesCollector)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer output.Close()
-	if len(os.Args) < 2 {
-		log.Fatal("No target receipt")
+	if !isReceiptFounded {
+		log.Fatal("No receipt found")
 	}
-	state := &AppState{
-		targetReceipt:          os.Args[1],
-		currentReceiptIsTarget: false,
-	}
-	_, err = output.Write(line)
-	state.isCookingDone(err)
-
-	for scanner.Scan() {
-		_, err := output.Write(line)
-		if state.isCookingDone(err) {
-			break
+	out := &StdWriteCloser{}
+	defer out.Close()
+	for i := 0; i < len(linesCollector.lines); i++ {
+		if _, err := out.Write(linesCollector.lines[i] + "\n"); err != nil {
+			log.Fatal(err)
 		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
 	}
 }
