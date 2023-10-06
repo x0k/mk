@@ -1,8 +1,8 @@
 #!/usr/bin/bash
-echo "zero"
+TARGET="cook"
+build:
+	go build -o ./bin/${TARGET}
 
-one:
-  echo "one"
-
-two:
-  echo "two"
+clean:
+	go clean
+	rm -f ./bin/${TARGET}
