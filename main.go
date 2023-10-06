@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"io"
 	"log"
 	"os"
@@ -10,7 +11,7 @@ import (
 
 type ReceiptLinesCollector interface {
 	io.StringWriter
-	GetLines() []string
+	GetLines() string
 	IsInTargetReceipt() bool
 }
 
@@ -23,7 +24,7 @@ func (e ReceiptLinesCollectorDoneError) Error() string {
 }
 
 type ReceiptLinesPrinter interface {
-	Print(lines []string) error
+	Print(lines string) error
 }
 
 func collectReceiptLines(collector ReceiptLinesCollector, scanner *bufio.Scanner) (bool, error) {
@@ -41,9 +42,13 @@ func collectReceiptLines(collector ReceiptLinesCollector, scanner *bufio.Scanner
 	return collector.IsInTargetReceipt(), nil
 }
 
-func makePrinter(firstLine string) (ReceiptLinesPrinter, error) {
-	if strings.HasPrefix(firstLine, "#!") {
-		return NewCmdReceiptLinesPrinter(firstLine)
+func makePrinter(lines string) (ReceiptLinesPrinter, error) {
+	if strings.HasPrefix(lines, "#!") {
+		index := strings.Index(lines, "\n")
+		if index < 0 {
+			return nil, errors.New("invalid shebang line")
+		}
+		return NewCmdReceiptLinesPrinter(lines[2:index])
 	} else {
 		return NewStdReceiptLinesPrinter(), nil
 	}
@@ -63,21 +68,21 @@ func main() {
 	collector := NewReceiptLinesCollector(receiptName)
 	isReceiptFounded, err := collectReceiptLines(collector, scanner)
 	if err != nil {
-		log.Fatal("Error during collection receipt lines", err)
+		log.Fatal("Error during collection receipt lines ", err)
 	}
 	if !isReceiptFounded {
-		log.Fatalf("Receipt \"%s\" not found", receiptName)
+		log.Fatalf("Receipt \"%s\" not found ", receiptName)
 	}
 	lines := collector.GetLines()
 	if len(lines) < 1 {
-		log.Fatal("Receipts file is empty")
+		log.Fatal("Receipts file is empty ")
 	}
-	printer, err := makePrinter(lines[0])
+	printer, err := makePrinter(lines)
 	if err != nil {
-		log.Fatal("Error during creating printer", err)
+		log.Fatal("Error during creating printer ", err)
 	}
 	err = printer.Print(collector.GetLines())
 	if err != nil {
-		log.Fatal("Error during printing", err)
+		log.Fatal("Error during printing ", err)
 	}
 }

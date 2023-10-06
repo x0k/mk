@@ -17,7 +17,7 @@ type receiptLinesCollector struct {
 	currentScope            string
 	shouldDefineScopeIndent bool
 	currentScopeIndentation string
-	lines                   []string
+	lines                   string
 }
 
 func NewReceiptLinesCollector(targetScope string) ReceiptLinesCollector {
@@ -40,12 +40,13 @@ func (r *receiptLinesCollector) switchScope(line string) error {
 		r.setScope(line)
 	} else {
 		r.currentScope = rootScope
+		r.appendLine(line)
 	}
 	return nil
 }
 
 func (r *receiptLinesCollector) appendLine(line string) {
-	r.lines = append(r.lines, line)
+	r.lines = r.lines + line + "\n"
 }
 
 func (r *receiptLinesCollector) appendScopedLine(line string) {
@@ -82,7 +83,7 @@ func (r *receiptLinesCollector) WriteString(line string) (int, error) {
 	return len(line), nil
 }
 
-func (r *receiptLinesCollector) GetLines() []string {
+func (r *receiptLinesCollector) GetLines() string {
 	return r.lines
 }
 
