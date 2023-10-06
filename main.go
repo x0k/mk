@@ -2,122 +2,56 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"io"
 	"log"
 	"os"
-	"regexp"
 	"strings"
 )
 
-type StringWriteCloser interface {
-	Write(line string) (int, error)
-	io.Closer
+type ReceiptLinesCollector interface {
+	io.StringWriter
+	GetLines() []string
+	IsInTargetReceipt() bool
 }
 
-type StringWriter interface {
-	Write(line string) error
-}
+type ReceiptLinesCollectorDoneError struct{}
 
-type StdWriteCloser struct{}
+var RLCDoneError = &ReceiptLinesCollectorDoneError{}
 
-func (StdWriteCloser) Write(line string) (int, error) {
-	return fmt.Println(line)
-}
-
-func (StdWriteCloser) Close() error {
-	return nil
-}
-
-const (
-	rootScope = ":root:"
-)
-
-var receiptNameRegExp, receiptNameRegExpError = regexp.Compile(`^[A-Za-z][0-9A-Za-z\t _-]*:$`)
-var scopeIdentRegExp, scopeIdentRegExpError = regexp.Compile(`^([ \t]+)`)
-
-type ScopedStringWriter struct {
-	targetScope             string
-	currentScope            string
-	shouldDefineScopeIndent bool
-	currentScopeIndentation string
-	lines                   []string
-}
-
-type ScopedStringWriterDoneError struct{}
-
-func (e ScopedStringWriterDoneError) Error() string {
+func (e ReceiptLinesCollectorDoneError) Error() string {
 	return "done"
 }
 
-func (r *ScopedStringWriter) setScope(line string) {
-	r.currentScope = line[:len(line)-1]
-	r.shouldDefineScopeIndent = true
+type ReceiptLinesPrinter interface {
+	Print(lines []string) error
 }
 
-func (r *ScopedStringWriter) switchScope(line string) error {
-	if r.currentScope == r.targetScope {
-		return &ScopedStringWriterDoneError{}
-	}
-	if receiptNameRegExp.MatchString(line) {
-		r.setScope(line)
-	} else {
-		r.currentScope = rootScope
-	}
-	return nil
-}
-
-func (r *ScopedStringWriter) appendScopedLine(line string) {
-	if r.targetScope == r.currentScope {
-		r.lines = append(r.lines, strings.TrimPrefix(line, r.currentScopeIndentation))
-	}
-}
-
-func (r *ScopedStringWriter) Write(line string) error {
-	if r.currentScope == rootScope {
-		if receiptNameRegExp.MatchString(line) {
-			r.setScope(line)
-		} else {
-			r.lines = append(r.lines, line)
-		}
-	} else {
-		if r.shouldDefineScopeIndent {
-			r.shouldDefineScopeIndent = false
-			matches := scopeIdentRegExp.FindStringSubmatch(line)
-			if len(matches) == 2 {
-				r.currentScopeIndentation = matches[1]
-				r.appendScopedLine(line)
-			} else if err := r.switchScope(line); err != nil {
-				return err
-			}
-		} else {
-			if strings.HasPrefix(line, r.currentScopeIndentation) {
-				r.appendScopedLine(line)
-			} else if err := r.switchScope(line); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func collectScopeStrings(scanner *bufio.Scanner, writer *ScopedStringWriter) (bool, error) {
+func collectReceiptLines(collector ReceiptLinesCollector, scanner *bufio.Scanner) (bool, error) {
 	for scanner.Scan() {
-		if err := (*writer).Write(scanner.Text()); err != nil {
-			switch err.(type) {
-			case ScopedStringWriterDoneError:
+		if _, err := collector.WriteString(scanner.Text()); err != nil {
+			if err == RLCDoneError {
 				return true, nil
-			default:
-				return false, err
 			}
+			return false, err
 		}
 	}
-	return false, scanner.Err()
+	if err := scanner.Err(); err != nil {
+		return false, err
+	}
+	return collector.IsInTargetReceipt(), nil
+}
+
+func makePrinter(firstLine string) (ReceiptLinesPrinter, error) {
+	if strings.HasPrefix(firstLine, "#!") {
+		return NewCmdReceiptLinesPrinter(firstLine)
+	} else {
+		return NewStdReceiptLinesPrinter(), nil
+	}
 }
 
 func main() {
 	if len(os.Args) < 2 {
-		log.Fatal("No receipt provided")
+		log.Fatal("No receipt name provided")
 	}
 	file, err := os.Open("receipts")
 	if err != nil {
@@ -125,22 +59,25 @@ func main() {
 	}
 	defer file.Close()
 	scanner := bufio.NewScanner(file)
-	linesCollector := &ScopedStringWriter{
-		targetScope:  os.Args[1],
-		currentScope: rootScope,
-	}
-	isReceiptFounded, err := collectScopeStrings(scanner, linesCollector)
+	receiptName := os.Args[1]
+	collector := NewReceiptLinesCollector(receiptName)
+	isReceiptFounded, err := collectReceiptLines(collector, scanner)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Error during collection receipt lines", err)
 	}
 	if !isReceiptFounded {
-		log.Fatal("No receipt found")
+		log.Fatalf("Receipt \"%s\" not found", receiptName)
 	}
-	out := &StdWriteCloser{}
-	defer out.Close()
-	for i := 0; i < len(linesCollector.lines); i++ {
-		if _, err := out.Write(linesCollector.lines[i] + "\n"); err != nil {
-			log.Fatal(err)
-		}
+	lines := collector.GetLines()
+	if len(lines) < 1 {
+		log.Fatal("Receipts file is empty")
+	}
+	printer, err := makePrinter(lines[0])
+	if err != nil {
+		log.Fatal("Error during creating printer", err)
+	}
+	err = printer.Print(collector.GetLines())
+	if err != nil {
+		log.Fatal("Error during printing", err)
 	}
 }

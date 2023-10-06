@@ -1,7 +1,8 @@
-hello
+#!/usr/bin/bash
+echo "zero"
 
 one:
-  print one
+  echo "one"
 
 two:
-  print two
+  echo "two"
