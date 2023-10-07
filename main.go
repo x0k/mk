@@ -54,13 +54,23 @@ func makePrinter(lines string) (ReceiptLinesPrinter, error) {
 	}
 }
 
+var fileNames = []string{"recipes", "Recipes", "recipe", "Recipe"}
+
 func main() {
 	if len(os.Args) < 2 {
 		log.Fatal("No receipt name provided")
 	}
-	file, err := os.Open("receipts")
+	var file *os.File
+	var err error
+	for _, fileName := range fileNames {
+		file, err = os.Open(fileName)
+		if err == nil {
+			defer file.Close()
+			break
+		}
+	}
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Recipe file not found, allowed file names: ", strings.Join(fileNames, ", "))
 	}
 	defer file.Close()
 	scanner := bufio.NewScanner(file)

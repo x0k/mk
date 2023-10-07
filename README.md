@@ -6,7 +6,7 @@ Text preprocessor for content segmentation.
 
 ### Basic
 
-`receipts` file
+`recipes` file
 
 ```shell
 TARGET="cook"
@@ -35,7 +35,7 @@ rm -f ./bin/${TARGET}
 
 ### Shebang
 
-`receipts` file
+`recipes` file
 
 ```shell
 #!/usr/bin/bash
@@ -79,4 +79,5 @@ go install github.com/x0k/cook@latest
   By default segment is not defined.
 
 - The end of a segment is determined by indentation changes or the end of the file.
-- If no segment is defined for a line, the line will be added to each segment defined below.
+- If segment is not defined for a line, the line will be added to each segment defined below.
+- Allowed file names `recipes`, `Recipes`, `recipe`, `Recipe`
