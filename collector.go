@@ -6,87 +6,87 @@ import (
 )
 
 const (
-	rootScope = ":root:"
+	recipe_not_defined   = 0
+	define_recipe_indent = 1
+	recipe_defined       = 2
 )
 
-var receiptNameRegExp, _ = regexp.Compile(`^[A-Za-z][0-9A-Za-z\t _-]*:$`)
-var scopeIdentRegExp, _ = regexp.Compile(`^([ \t]+)`)
+var recipeNameRegExp, _ = regexp.Compile(`^[A-Za-z][0-9A-Za-z\t _-]*:$`)
+var recipeIndentRegExp, _ = regexp.Compile(`^([ \t]+)`)
 
-type receiptLinesCollector struct {
-	targetScope             string
-	currentScope            string
-	shouldDefineScopeIndent bool
-	currentScopeIndentation string
-	lines                   string
+type recipeLinesCollector struct {
+	state             int
+	targetRecipe      string
+	isRecipeFound     bool
+	recipeIndentation string
+	lines             string
 }
 
-func NewReceiptLinesCollector(targetScope string) ReceiptLinesCollector {
-	return &receiptLinesCollector{
-		targetScope:  targetScope,
-		currentScope: rootScope,
+func NewRecipeLinesCollector(targetRecipe string) RecipeLinesCollector {
+	return &recipeLinesCollector{
+		targetRecipe: targetRecipe,
 	}
 }
 
-func (r *receiptLinesCollector) setScope(line string) {
-	r.currentScope = line[:len(line)-1]
-	r.shouldDefineScopeIndent = true
+func (r *recipeLinesCollector) appendLine(line string) {
+	r.lines = r.lines + line + "\n"
 }
 
-func (r *receiptLinesCollector) switchScope(line string) error {
-	if r.currentScope == r.targetScope {
+func (r *recipeLinesCollector) appendRecipeLine(line string) {
+	if r.isRecipeFound {
+		r.appendLine(strings.TrimPrefix(line, r.recipeIndentation))
+	}
+}
+
+func (r *recipeLinesCollector) setRecipe(line string) {
+	r.isRecipeFound = r.targetRecipe == line[:len(line)-1]
+	r.state = define_recipe_indent
+}
+
+func (r *recipeLinesCollector) handleRecipeChange(line string) error {
+	if r.isRecipeFound {
 		return RLCDoneError
 	}
-	if receiptNameRegExp.MatchString(line) {
-		r.setScope(line)
+	if recipeNameRegExp.MatchString(line) {
+		r.setRecipe(line)
 	} else {
-		r.currentScope = rootScope
 		r.appendLine(line)
+		r.state = recipe_not_defined
 	}
 	return nil
 }
 
-func (r *receiptLinesCollector) appendLine(line string) {
-	r.lines = r.lines + line + "\n"
-}
-
-func (r *receiptLinesCollector) appendScopedLine(line string) {
-	if r.targetScope == r.currentScope {
-		r.appendLine(strings.TrimPrefix(line, r.currentScopeIndentation))
-	}
-}
-
-func (r *receiptLinesCollector) WriteString(line string) (int, error) {
-	if r.currentScope == rootScope {
-		if receiptNameRegExp.MatchString(line) {
-			r.setScope(line)
+func (r *recipeLinesCollector) WriteString(line string) (int, error) {
+	switch r.state {
+	case recipe_not_defined:
+		if recipeNameRegExp.MatchString(line) {
+			r.setRecipe(line)
 		} else {
 			r.appendLine(line)
 		}
-	} else {
-		if r.shouldDefineScopeIndent {
-			r.shouldDefineScopeIndent = false
-			matches := scopeIdentRegExp.FindStringSubmatch(line)
-			if len(matches) == 2 {
-				r.currentScopeIndentation = matches[1]
-				r.appendScopedLine(line)
-			} else if err := r.switchScope(line); err != nil {
-				return 0, err
-			}
-		} else {
-			if strings.HasPrefix(line, r.currentScopeIndentation) {
-				r.appendScopedLine(line)
-			} else if err := r.switchScope(line); err != nil {
-				return 0, err
-			}
+	case define_recipe_indent:
+		matches := recipeIndentRegExp.FindStringSubmatch(line)
+		if len(matches) == 2 {
+			r.recipeIndentation = matches[1]
+			r.appendRecipeLine(line)
+			r.state = recipe_defined
+		} else if err := r.handleRecipeChange(line); err != nil {
+			return 0, err
+		}
+	case recipe_defined:
+		if strings.HasPrefix(line, r.recipeIndentation) {
+			r.appendRecipeLine(line)
+		} else if err := r.handleRecipeChange(line); err != nil {
+			return 0, err
 		}
 	}
 	return len(line), nil
 }
 
-func (r *receiptLinesCollector) GetLines() string {
+func (r *recipeLinesCollector) GetLines() string {
 	return r.lines
 }
 
-func (r *receiptLinesCollector) IsInTargetReceipt() bool {
-	return r.currentScope == r.targetScope
+func (r *recipeLinesCollector) IsRecipeFound() bool {
+	return r.isRecipeFound
 }

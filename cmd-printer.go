@@ -8,11 +8,11 @@ import (
 	"strings"
 )
 
-type cmdReceiptLinesPrinter struct {
+type cmdRecipeLinesPrinter struct {
 	cmd *exec.Cmd
 }
 
-func NewCmdReceiptLinesPrinter(command string) (ReceiptLinesPrinter, error) {
+func NewCmdRecipeLinesPrinter(command string) (RecipeLinesPrinter, error) {
 	parts := strings.Fields(command)
 	if len(parts) < 1 {
 		return nil, errors.New("invalid command line")
@@ -21,13 +21,13 @@ func NewCmdReceiptLinesPrinter(command string) (ReceiptLinesPrinter, error) {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Env = os.Environ()
-	return &cmdReceiptLinesPrinter{
+	return &cmdRecipeLinesPrinter{
 		cmd: cmd,
 	}, nil
 }
 
-// Print implements ReceiptLinesPrinter.
-func (p *cmdReceiptLinesPrinter) Print(lines string) error {
+// Print implements RecipeLinesPrinter.
+func (p *cmdRecipeLinesPrinter) Print(lines string) error {
 	// Create a pipe for stdin.
 	stdin, err := p.cmd.StdinPipe()
 	if err != nil {

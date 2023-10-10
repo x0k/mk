@@ -4,13 +4,13 @@ import (
 	"fmt"
 )
 
-type stdReceiptLinesPrinter struct{}
+type stdRecipeLinesPrinter struct{}
 
-func NewStdReceiptLinesPrinter() ReceiptLinesPrinter {
-	return &stdReceiptLinesPrinter{}
+func NewStdRecipeLinesPrinter() RecipeLinesPrinter {
+	return &stdRecipeLinesPrinter{}
 }
 
-func (p *stdReceiptLinesPrinter) Print(lines string) error {
+func (p *stdRecipeLinesPrinter) Print(lines string) error {
 	_, err := fmt.Print(lines)
 	return err
 }

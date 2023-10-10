@@ -9,25 +9,25 @@ import (
 	"strings"
 )
 
-type ReceiptLinesCollector interface {
+type RecipeLinesCollector interface {
 	io.StringWriter
 	GetLines() string
-	IsInTargetReceipt() bool
+	IsRecipeFound() bool
 }
 
-type ReceiptLinesCollectorDoneError struct{}
+type RecipeLinesCollectorDoneError struct{}
 
-var RLCDoneError = &ReceiptLinesCollectorDoneError{}
+var RLCDoneError = &RecipeLinesCollectorDoneError{}
 
-func (e ReceiptLinesCollectorDoneError) Error() string {
+func (e RecipeLinesCollectorDoneError) Error() string {
 	return "done"
 }
 
-type ReceiptLinesPrinter interface {
+type RecipeLinesPrinter interface {
 	Print(lines string) error
 }
 
-func collectReceiptLines(collector ReceiptLinesCollector, scanner *bufio.Scanner) (bool, error) {
+func collectRecipeLines(collector RecipeLinesCollector, scanner *bufio.Scanner) (bool, error) {
 	for scanner.Scan() {
 		if _, err := collector.WriteString(scanner.Text()); err != nil {
 			if err == RLCDoneError {
@@ -39,18 +39,18 @@ func collectReceiptLines(collector ReceiptLinesCollector, scanner *bufio.Scanner
 	if err := scanner.Err(); err != nil {
 		return false, err
 	}
-	return collector.IsInTargetReceipt(), nil
+	return collector.IsRecipeFound(), nil
 }
 
-func makePrinter(lines string) (ReceiptLinesPrinter, error) {
+func makePrinter(lines string) (RecipeLinesPrinter, error) {
 	if strings.HasPrefix(lines, "#!") {
 		index := strings.Index(lines, "\n")
 		if index < 0 {
 			return nil, errors.New("invalid shebang line")
 		}
-		return NewCmdReceiptLinesPrinter(lines[2:index])
+		return NewCmdRecipeLinesPrinter(lines[2:index])
 	} else {
-		return NewStdReceiptLinesPrinter(), nil
+		return NewStdRecipeLinesPrinter(), nil
 	}
 }
 
@@ -58,7 +58,7 @@ var fileNames = []string{"recipes", "Recipes", "recipe", "Recipe"}
 
 func main() {
 	if len(os.Args) < 2 {
-		log.Fatal("No receipt name provided")
+		log.Fatal("No recipe name provided")
 	}
 	var file *os.File
 	var err error
@@ -74,18 +74,18 @@ func main() {
 	}
 	defer file.Close()
 	scanner := bufio.NewScanner(file)
-	receiptName := os.Args[1]
-	collector := NewReceiptLinesCollector(receiptName)
-	isReceiptFounded, err := collectReceiptLines(collector, scanner)
+	recipeName := os.Args[1]
+	collector := NewRecipeLinesCollector(recipeName)
+	isRecipeFound, err := collectRecipeLines(collector, scanner)
 	if err != nil {
-		log.Fatal("Error during collection receipt lines ", err)
+		log.Fatal("Error during collection recipe lines ", err)
 	}
-	if !isReceiptFounded {
-		log.Fatalf("Receipt \"%s\" not found ", receiptName)
+	if !isRecipeFound {
+		log.Fatalf("Recipe \"%s\" not found ", recipeName)
 	}
 	lines := collector.GetLines()
 	if len(lines) < 1 {
-		log.Fatal("Receipts file is empty ")
+		log.Fatal("Recipe file is empty ")
 	}
 	printer, err := makePrinter(lines)
 	if err != nil {
