@@ -66,7 +66,7 @@ func (r *recipeLinesCollector) WriteString(line string) (int, error) {
 		}
 	case define_recipe_indent:
 		matches := recipeIndentRegExp.FindStringSubmatch(line)
-		if len(matches) == 2 {
+		if matches != nil {
 			r.recipeIndentation = matches[1]
 			r.appendRecipeLine(line)
 			r.state = recipe_defined
