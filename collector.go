@@ -11,8 +11,8 @@ const (
 	recipe_defined       = 2
 )
 
-var recipeNameRegExp, _ = regexp.Compile(`^[A-Za-z][0-9A-Za-z\t _-]*:$`)
-var recipeIndentRegExp, _ = regexp.Compile(`^([ \t]+)`)
+var recipeNameRegExp = regexp.MustCompile(`^[A-Za-z][0-9A-Za-z\t _-]*:$`)
+var recipeIndentRegExp = regexp.MustCompile(`^([ \t]+)`)
 
 type recipeLinesCollector struct {
 	state             int
