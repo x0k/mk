@@ -1,4 +1,4 @@
-# Cook
+# Mk
 
 Text preprocessor for content segmentation.
 
@@ -6,10 +6,10 @@ Text preprocessor for content segmentation.
 
 ### Basic
 
-`recipes` file
+`mkfile` file
 
 ```shell
-TARGET="cook"
+TARGET="mk"
 build:
   go build -o ./bin/${TARGET}
 
@@ -18,24 +18,24 @@ clean:
   rm -f ./bin/${TARGET}
 ```
 
-`cook build` output
+`mk build` output
 
 ```shell
-TARGET="cook"
+TARGET="mk"
 go build -o ./bin/${TARGET}
 ```
 
-`cook clean` output
+`mk clean` output
 
 ```shell
-TARGET="cook"
+TARGET="mk"
 go clean
 rm -f ./bin/${TARGET}
 ```
 
 ### Shebang
 
-`recipes` file
+`mkfile` file
 
 ```shell
 #!/usr/bin/bash
@@ -47,14 +47,14 @@ three:
   echo "three"
 ```
 
-`cook one` output
+`mk one` output
 
 ```shell
 zero
 one
 ```
 
-`cook three` output
+`mk three` output
 
 ```shell
 zero
@@ -69,7 +69,7 @@ three
 With go 1.18 or higher:
 
 ```shell
-go install github.com/x0k/cook@latest
+go install github.com/x0k/mk@latest
 ```
 
 ## Explanation
@@ -80,4 +80,4 @@ go install github.com/x0k/cook@latest
 
 - The end of a segment is determined by indentation changes or the end of the file.
 - If segment is not defined for a line, the line will be added to each segment defined below.
-- Allowed file names `recipes`, `Recipes`, `recipe`, `Recipe`
+- Allowed file names `mkfile`, `Mkfile`

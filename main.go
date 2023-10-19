@@ -7,19 +7,19 @@ import (
 	"strings"
 )
 
-func makePrinter(lines string) RecipeLinesPrinter {
+func makePrinter(lines string) LinesPrinter {
 	if strings.HasPrefix(lines, "#!") {
-		return CmdRecipeLinesPrinter
+		return CmdLinesPrinter
 	} else {
-		return StdRecipeLinesPrinter
+		return StdLinesPrinter
 	}
 }
 
-var fileNames = []string{"recipes", "Recipes", "recipe", "Recipe"}
+var fileNames = []string{"mkfile", "Mkfile"}
 
 func main() {
 	if len(os.Args) < 2 {
-		log.Fatal("No recipe name provided")
+		log.Fatal("No segment name provided")
 	}
 	var file *os.File
 	var err error
@@ -31,22 +31,22 @@ func main() {
 		}
 	}
 	if err != nil {
-		log.Fatal("Recipe file not found, allowed file names: ", strings.Join(fileNames, ", "))
+		log.Fatal("Mkfile not found, allowed file names: ", strings.Join(fileNames, ", "))
 	}
 	defer file.Close()
 	scanner := bufio.NewScanner(file)
-	recipeName := os.Args[1]
-	collector := NewRecipeLinesCollector(recipeName)
-	isRecipeFound, err := collector.CollectLines(scanner)
+	targetSegment := os.Args[1]
+	collector := NewSegmentLinesCollector(targetSegment)
+	isSegmentFound, err := collector.CollectLines(scanner)
 	if err != nil {
-		log.Fatal("Error during collection recipe lines ", err)
+		log.Fatal("Error during collecting segment lines ", err)
 	}
-	if !isRecipeFound {
-		log.Fatalf("Recipe \"%s\" not found ", recipeName)
+	if !isSegmentFound {
+		log.Fatalf("Segment \"%s\" not found ", targetSegment)
 	}
 	lines := collector.GetLines()
 	if len(lines) < 1 {
-		log.Fatal("Recipe file is empty ")
+		log.Fatal("Segment is empty")
 	}
 	printer := makePrinter(lines)
 	if err != nil {

@@ -1,6 +1,6 @@
 #!/usr/bin/bash -xe
 
-TARGET="cook"
+TARGET="mk"
 
 build:
 	go build -o ./bin/${TARGET}

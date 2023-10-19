@@ -5,14 +5,13 @@ import (
 	"os/exec"
 )
 
-type cmdRecipeLinesPrinter struct {
+type cmdLinesPrinter struct {
 }
 
-var CmdRecipeLinesPrinter = &cmdRecipeLinesPrinter{}
+var CmdLinesPrinter = &cmdLinesPrinter{}
 
-// Print implements RecipeLinesPrinter.
-func (p *cmdRecipeLinesPrinter) Print(lines string) error {
-	tmpFile, err := os.CreateTemp("", "cook_tmp_script_*")
+func (p *cmdLinesPrinter) Print(lines string) error {
+	tmpFile, err := os.CreateTemp("", "mk_tmp_script_*")
 	if err != nil {
 		return err
 	}
