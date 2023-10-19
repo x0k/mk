@@ -6,9 +6,7 @@ import (
 
 type stdRecipeLinesPrinter struct{}
 
-func NewStdRecipeLinesPrinter() RecipeLinesPrinter {
-	return &stdRecipeLinesPrinter{}
-}
+var StdRecipeLinesPrinter = &stdRecipeLinesPrinter{}
 
 func (p *stdRecipeLinesPrinter) Print(lines string) error {
 	_, err := fmt.Print(lines)

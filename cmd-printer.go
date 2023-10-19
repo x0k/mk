@@ -1,49 +1,40 @@
 package main
 
 import (
-	"errors"
-	"io"
 	"os"
 	"os/exec"
-	"strings"
 )
 
 type cmdRecipeLinesPrinter struct {
-	cmd *exec.Cmd
 }
 
-func NewCmdRecipeLinesPrinter(command string) (RecipeLinesPrinter, error) {
-	parts := strings.Fields(command)
-	if len(parts) < 1 {
-		return nil, errors.New("invalid command line")
-	}
-	cmd := exec.Command(parts[0], parts[1:]...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Env = os.Environ()
-	return &cmdRecipeLinesPrinter{
-		cmd: cmd,
-	}, nil
-}
+var CmdRecipeLinesPrinter = &cmdRecipeLinesPrinter{}
 
 // Print implements RecipeLinesPrinter.
 func (p *cmdRecipeLinesPrinter) Print(lines string) error {
-	// Create a pipe for stdin.
-	stdin, err := p.cmd.StdinPipe()
+	tmpFile, err := os.CreateTemp("", "cook_tmp_script_*")
 	if err != nil {
 		return err
 	}
-	defer stdin.Close()
-	if err := p.cmd.Start(); err != nil {
-		return err
-	}
-	_, err = io.WriteString(stdin, lines)
+	defer os.Remove(tmpFile.Name())
+	defer tmpFile.Close()
+	_, err = tmpFile.WriteString(lines)
 	if err != nil {
 		return err
 	}
-	err = stdin.Close()
+	err = os.Chmod(tmpFile.Name(), 0755)
 	if err != nil {
 		return err
 	}
-	return p.cmd.Wait()
+	err = tmpFile.Close()
+	if err != nil {
+		return err
+	}
+
+	cmd := exec.Command(tmpFile.Name())
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Env = os.Environ()
+	return cmd.Run()
 }

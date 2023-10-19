@@ -2,30 +2,10 @@ package main
 
 import (
 	"bufio"
-	"errors"
-	"io"
 	"log"
 	"os"
 	"strings"
 )
-
-type RecipeLinesCollector interface {
-	io.StringWriter
-	GetLines() string
-	IsRecipeFound() bool
-}
-
-type RecipeLinesCollectorDoneError struct{}
-
-var RLCDoneError = &RecipeLinesCollectorDoneError{}
-
-func (e RecipeLinesCollectorDoneError) Error() string {
-	return "done"
-}
-
-type RecipeLinesPrinter interface {
-	Print(lines string) error
-}
 
 func collectRecipeLines(collector RecipeLinesCollector, scanner *bufio.Scanner) (bool, error) {
 	for scanner.Scan() {
@@ -42,15 +22,11 @@ func collectRecipeLines(collector RecipeLinesCollector, scanner *bufio.Scanner) 
 	return collector.IsRecipeFound(), nil
 }
 
-func makePrinter(lines string) (RecipeLinesPrinter, error) {
+func makePrinter(lines string) RecipeLinesPrinter {
 	if strings.HasPrefix(lines, "#!") {
-		index := strings.Index(lines, "\n")
-		if index < 0 {
-			return nil, errors.New("invalid shebang line")
-		}
-		return NewCmdRecipeLinesPrinter(lines[2:index])
+		return CmdRecipeLinesPrinter
 	} else {
-		return NewStdRecipeLinesPrinter(), nil
+		return StdRecipeLinesPrinter
 	}
 }
 
@@ -87,7 +63,7 @@ func main() {
 	if len(lines) < 1 {
 		log.Fatal("Recipe file is empty ")
 	}
-	printer, err := makePrinter(lines)
+	printer := makePrinter(lines)
 	if err != nil {
 		log.Fatal("Error during creating printer ", err)
 	}
