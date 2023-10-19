@@ -7,9 +7,10 @@ import (
 )
 
 const (
-	SEGMENT_NOT_DEFINED = 0
-	SEGMENT_STARTS      = 1
-	SEGMENT_CONTINUED   = 2
+	SEGMENT_NOT_DEFINED     = 0
+	SEGMENT_STARTS          = 1
+	SEGMENT_CONTINUED       = 2
+	TARGET_SEGMENT_FINISHED = 3
 )
 
 var SEGMENT_NAME_REG_EXP = regexp.MustCompile(`^[A-Za-z][0-9A-Za-z\t _-]*:$`)
@@ -44,7 +45,7 @@ func (r *segmentLinesCollector) startSegment(line string) {
 	r.state = SEGMENT_STARTS
 }
 
-func (r *segmentLinesCollector) handleSegmentChange(line string) {
+func (r *segmentLinesCollector) finishSegment(line string) {
 	if SEGMENT_NAME_REG_EXP.MatchString(line) {
 		r.startSegment(line)
 	} else {
@@ -53,7 +54,7 @@ func (r *segmentLinesCollector) handleSegmentChange(line string) {
 	}
 }
 
-func (r *segmentLinesCollector) collectLine(line string) bool {
+func (r *segmentLinesCollector) collectLine(line string) {
 	switch r.state {
 	case SEGMENT_NOT_DEFINED:
 		if SEGMENT_NAME_REG_EXP.MatchString(line) {
@@ -68,26 +69,26 @@ func (r *segmentLinesCollector) collectLine(line string) bool {
 			r.appendSegmentLine(line)
 			r.state = SEGMENT_CONTINUED
 		} else if r.isSegmentFound {
-			return true
+			r.state = TARGET_SEGMENT_FINISHED
 		} else {
-			r.handleSegmentChange(line)
+			r.finishSegment(line)
 		}
 	case SEGMENT_CONTINUED:
 		if strings.HasPrefix(line, r.segmentIndentation) {
 			r.appendSegmentLine(line)
 		} else if r.isSegmentFound {
-			return true
+			r.state = TARGET_SEGMENT_FINISHED
 		} else {
-			r.handleSegmentChange(line)
+			r.finishSegment(line)
 		}
 	}
-	return false
 }
 
 func (r *segmentLinesCollector) CollectLines(scanner *bufio.Scanner) (bool, error) {
 	for scanner.Scan() {
-		if targetSegmentEnded := r.collectLine(scanner.Text()); targetSegmentEnded {
-			return targetSegmentEnded, nil
+		r.collectLine(scanner.Text())
+		if r.state == TARGET_SEGMENT_FINISHED {
+			return true, nil
 		}
 	}
 	if err := scanner.Err(); err != nil {
