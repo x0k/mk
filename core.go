@@ -1,19 +1,10 @@
 package main
 
-import "io"
+import "bufio"
 
 type RecipeLinesCollector interface {
-	io.StringWriter
+	CollectLines(scanner *bufio.Scanner) (bool, error)
 	GetLines() string
-	IsRecipeFound() bool
-}
-
-type RecipeLinesCollectorDoneError struct{}
-
-var RLCDoneError = &RecipeLinesCollectorDoneError{}
-
-func (e RecipeLinesCollectorDoneError) Error() string {
-	return "done"
 }
 
 type RecipeLinesPrinter interface {

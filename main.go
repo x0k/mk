@@ -7,21 +7,6 @@ import (
 	"strings"
 )
 
-func collectRecipeLines(collector RecipeLinesCollector, scanner *bufio.Scanner) (bool, error) {
-	for scanner.Scan() {
-		if _, err := collector.WriteString(scanner.Text()); err != nil {
-			if err == RLCDoneError {
-				return true, nil
-			}
-			return false, err
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		return false, err
-	}
-	return collector.IsRecipeFound(), nil
-}
-
 func makePrinter(lines string) RecipeLinesPrinter {
 	if strings.HasPrefix(lines, "#!") {
 		return CmdRecipeLinesPrinter
@@ -52,7 +37,7 @@ func main() {
 	scanner := bufio.NewScanner(file)
 	recipeName := os.Args[1]
 	collector := NewRecipeLinesCollector(recipeName)
-	isRecipeFound, err := collectRecipeLines(collector, scanner)
+	isRecipeFound, err := collector.CollectLines(scanner)
 	if err != nil {
 		log.Fatal("Error during collection recipe lines ", err)
 	}
@@ -67,7 +52,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Error during creating printer ", err)
 	}
-	err = printer.Print(collector.GetLines())
+	err = printer.Print(lines)
 	if err != nil {
 		log.Fatal("Error during printing ", err)
 	}

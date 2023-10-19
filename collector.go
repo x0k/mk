@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"regexp"
 	"strings"
 )
@@ -43,20 +44,16 @@ func (r *recipeLinesCollector) setRecipe(line string) {
 	r.state = define_recipe_indent
 }
 
-func (r *recipeLinesCollector) handleRecipeChange(line string) error {
-	if r.isRecipeFound {
-		return RLCDoneError
-	}
+func (r *recipeLinesCollector) handleRecipeChange(line string) {
 	if recipeNameRegExp.MatchString(line) {
 		r.setRecipe(line)
 	} else {
 		r.appendLine(line)
 		r.state = recipe_not_defined
 	}
-	return nil
 }
 
-func (r *recipeLinesCollector) WriteString(line string) (int, error) {
+func (r *recipeLinesCollector) collectLine(line string) bool {
 	switch r.state {
 	case recipe_not_defined:
 		if recipeNameRegExp.MatchString(line) {
@@ -70,23 +67,35 @@ func (r *recipeLinesCollector) WriteString(line string) (int, error) {
 			r.recipeIndentation = matches[1]
 			r.appendRecipeLine(line)
 			r.state = recipe_defined
-		} else if err := r.handleRecipeChange(line); err != nil {
-			return 0, err
+		} else if r.isRecipeFound {
+			return true
+		} else {
+			r.handleRecipeChange(line)
 		}
 	case recipe_defined:
 		if strings.HasPrefix(line, r.recipeIndentation) {
 			r.appendRecipeLine(line)
-		} else if err := r.handleRecipeChange(line); err != nil {
-			return 0, err
+		} else if r.isRecipeFound {
+			return true
+		} else {
+			r.handleRecipeChange(line)
 		}
 	}
-	return len(line), nil
+	return false
+}
+
+func (r *recipeLinesCollector) CollectLines(scanner *bufio.Scanner) (bool, error) {
+	for scanner.Scan() {
+		if finished := r.collectLine(scanner.Text()); finished {
+			return finished, nil
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return false, err
+	}
+	return r.isRecipeFound, nil
 }
 
 func (r *recipeLinesCollector) GetLines() string {
 	return r.lines
-}
-
-func (r *recipeLinesCollector) IsRecipeFound() bool {
-	return r.isRecipeFound
 }
