@@ -42,9 +42,9 @@ rm -f ./bin/${TARGET}
 echo "zero"
 one:
   echo "one"
-echo "two"
-three:
-  echo "three"
+echo $1
+two:
+  echo "two"
 ```
 
 `mk one` output
@@ -54,12 +54,12 @@ zero
 one
 ```
 
-`mk three` output
+`mk two my-one` output
 
 ```shell
 zero
+my-one
 two
-three
 ```
 
 ## Installation

@@ -9,7 +9,7 @@ import (
 
 func makePrinter(lines string) LinesPrinter {
 	if strings.HasPrefix(lines, "#!") {
-		return CmdLinesPrinter
+		return NewCmdLinesPrinter(os.Args[2:])
 	} else {
 		return StdLinesPrinter
 	}

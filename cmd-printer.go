@@ -6,9 +6,14 @@ import (
 )
 
 type cmdLinesPrinter struct {
+	args []string
 }
 
-var CmdLinesPrinter = &cmdLinesPrinter{}
+func NewCmdLinesPrinter(args []string) LinesPrinter {
+	return &cmdLinesPrinter{
+		args: args,
+	}
+}
 
 func (p *cmdLinesPrinter) Print(lines string) error {
 	tmpFile, err := os.CreateTemp("", "mk_tmp_script_*")
@@ -30,7 +35,7 @@ func (p *cmdLinesPrinter) Print(lines string) error {
 		return err
 	}
 
-	cmd := exec.Command(tmpFile.Name())
+	cmd := exec.Command(tmpFile.Name(), p.args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
