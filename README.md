@@ -1,4 +1,4 @@
-# Mk
+# mk
 
 Text preprocessor for content segmentation.
 
