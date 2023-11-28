@@ -33,19 +33,17 @@ func main() {
 	defer file.Close()
 	scanner := bufio.NewScanner(file)
 	var collector LinesCollector
+	targetSegment := "all"
 	if len(os.Args) > 1 {
-		targetSegment := os.Args[1]
-		collector = NewSegmentLinesCollector(targetSegment)
-	} else {
-		collector = NewAllLinesCollector()
+		targetSegment = os.Args[1]
 	}
+	collector = NewSegmentLinesCollector(targetSegment)
 	isSegmentFound, err := collector.CollectLines(scanner)
 	if err != nil {
 		log.Fatal("Error during collecting segment lines ", err)
 	}
-	// Will be true only if segment specified in args
 	if !isSegmentFound {
-		log.Fatalf("Segment \"%s\" not found ", os.Args[1])
+		log.Fatalf("Segment \"%s\" not found ", targetSegment)
 	}
 	lines := collector.GetLines()
 	if len(lines) < 1 {
