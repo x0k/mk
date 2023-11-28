@@ -2,19 +2,8 @@ package main
 
 import (
 	"bufio"
-	"regexp"
 	"strings"
 )
-
-const (
-	SEGMENT_NOT_DEFINED     = 0
-	SEGMENT_STARTS          = 1
-	SEGMENT_CONTINUED       = 2
-	TARGET_SEGMENT_FINISHED = 3
-)
-
-var SEGMENT_NAME_REG_EXP = regexp.MustCompile(`^[A-Za-z][0-9A-Za-z\t _-]*:$`)
-var SEGMENT_INDENT_REG_EXP = regexp.MustCompile(`^([ \t]+)`)
 
 type segmentLinesCollector struct {
 	state              int

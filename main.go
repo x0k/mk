@@ -18,9 +18,6 @@ func makePrinter(lines string) LinesPrinter {
 var fileNames = []string{"mkfile", "Mkfile"}
 
 func main() {
-	if len(os.Args) < 2 {
-		log.Fatal("No segment name provided")
-	}
 	var file *os.File
 	var err error
 	for _, fileName := range fileNames {
@@ -35,14 +32,20 @@ func main() {
 	}
 	defer file.Close()
 	scanner := bufio.NewScanner(file)
-	targetSegment := os.Args[1]
-	collector := NewSegmentLinesCollector(targetSegment)
+	var collector LinesCollector
+	if len(os.Args) > 1 {
+		targetSegment := os.Args[1]
+		collector = NewSegmentLinesCollector(targetSegment)
+	} else {
+		collector = NewAllLinesCollector()
+	}
 	isSegmentFound, err := collector.CollectLines(scanner)
 	if err != nil {
 		log.Fatal("Error during collecting segment lines ", err)
 	}
+	// Will be true only if segment specified in args
 	if !isSegmentFound {
-		log.Fatalf("Segment \"%s\" not found ", targetSegment)
+		log.Fatalf("Segment \"%s\" not found ", os.Args[1])
 	}
 	lines := collector.GetLines()
 	if len(lines) < 1 {
