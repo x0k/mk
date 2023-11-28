@@ -74,7 +74,7 @@ go install github.com/x0k/mk@latest
 
 ## Explanation
 
-- The segment defined by a label that satisfies this regular expression `^[A-Za-z][0-9A-Za-z\t _-]*:$` and by the presence of equal indentation `^([ \t]+)` on the subsequent lines.
+- The segment defined by a label that satisfies this regular expression `^[A-Za-z][0-9A-Za-z\t_-]*:$` and by the presence of equal indentation `^([ \t]+)` on the subsequent lines.
 
   By default segment is not defined.
 

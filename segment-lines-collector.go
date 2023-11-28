@@ -29,14 +29,15 @@ func (r *segmentLinesCollector) appendSegmentLine(line string) {
 	}
 }
 
-func (r *segmentLinesCollector) startSegment(line string) {
-	r.isSegmentFound = r.targetSegment == line[:len(line)-1]
+func (r *segmentLinesCollector) startSegment(matched []string) {
+	r.isSegmentFound = r.targetSegment == matched[1]
 	r.state = SEGMENT_STARTS
 }
 
 func (r *segmentLinesCollector) finishSegment(line string) {
-	if SEGMENT_NAME_REG_EXP.MatchString(line) {
-		r.startSegment(line)
+	matched := SEGMENT_INDENT_REG_EXP.FindStringSubmatch(line)
+	if matched != nil {
+		r.startSegment(matched)
 	} else {
 		r.appendLine(line)
 		r.state = SEGMENT_NOT_DEFINED
@@ -46,8 +47,9 @@ func (r *segmentLinesCollector) finishSegment(line string) {
 func (r *segmentLinesCollector) collectLine(line string) {
 	switch r.state {
 	case SEGMENT_NOT_DEFINED:
-		if SEGMENT_NAME_REG_EXP.MatchString(line) {
-			r.startSegment(line)
+		matched := SEGMENT_NAME_REG_EXP.FindStringSubmatch(line)
+		if matched != nil {
+			r.startSegment(matched)
 		} else {
 			r.appendLine(line)
 		}
