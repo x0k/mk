@@ -21,5 +21,5 @@ const (
 	TARGET_SEGMENT_FINISHED = 3
 )
 
-var SEGMENT_NAME_REG_EXP = regexp.MustCompile(`^([A-Za-z][0-9A-Za-z\t_-]*):((?: |[A-Za-z][0-9A-Za-z\t_-]*)*)$`)
+var SEGMENT_NAME_REG_EXP = regexp.MustCompile(`^([A-z][0-9A-z_-]*):(.*)$`)
 var SEGMENT_INDENT_REG_EXP = regexp.MustCompile(`^([ \t]+)`)

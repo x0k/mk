@@ -62,6 +62,48 @@ my-one
 two
 ```
 
+### Targets
+
+`mkfile` file
+
+```shell
+#!/usr/bin/bash
+prepare: test build
+  echo "prepare"
+build:
+  echo "build"
+test:
+  echo "test"
+clean:
+  echo "clean"
+```
+
+`mk build` output
+
+```shell
+prepare
+build
+```
+
+`mk clean` output
+
+```shell
+clean
+```
+
+The equivalent `mkfile`
+
+```shell
+#!/usr/bin/bash
+clean:
+  echo "clean"
+echo "prepare"
+build:
+  echo "build"
+test:
+  echo "test"
+```
+
 ## Installation
 
 ### Via `go install`
@@ -74,10 +116,11 @@ go install github.com/x0k/mk@latest
 
 ## Explanation
 
-- The segment defined by a label that satisfies this regular expression `^[A-Za-z][0-9A-Za-z\t_-]*:$` and by the presence of equal indentation `^([ \t]+)` on the subsequent lines.
+- The segment defined by a label (and optional targets) that satisfies this regular expression `^[A-Za-z][0-9A-Za-z_-]*:(.*)$` and by the presence of equal indentation `^([ \t]+)` on the subsequent lines.
 
   By default segment is not defined.
 
 - The end of a segment is determined by indentation changes or the end of the file.
 - If segment is not defined for a line, the line will be added to each segment defined below.
-- Allowed file names `mkfile`, `Mkfile`
+- Allowed file names `mkfile`, `Mkfile`.
+- By default target segment is `all`.
