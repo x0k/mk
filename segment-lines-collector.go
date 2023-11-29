@@ -6,11 +6,12 @@ import (
 )
 
 type segmentLinesCollector struct {
-	state              int
-	targetSegment      string
-	isSegmentFound     bool
-	segmentIndentation string
-	lines              string
+	state                int
+	targetSegment        string
+	isCollectableSegment bool
+	isTargetSegmentFound bool
+	segmentIndentation   string
+	lines                string
 }
 
 func NewSegmentLinesCollector(targetSegment string) LinesCollector {
@@ -24,19 +25,34 @@ func (r *segmentLinesCollector) appendLine(line string) {
 }
 
 func (r *segmentLinesCollector) appendSegmentLine(line string) {
-	if r.isSegmentFound {
+	if r.isCollectableSegment || r.isTargetSegmentFound {
 		r.appendLine(strings.TrimPrefix(line, r.segmentIndentation))
 	}
 }
 
-func (r *segmentLinesCollector) startSegment(line string) {
-	r.isSegmentFound = r.targetSegment == line[:len(line)-1]
+func (r *segmentLinesCollector) startSegment(matched []string) {
+	r.isTargetSegmentFound = r.targetSegment == matched[1]
+	if !r.isTargetSegmentFound && len(matched) > 2 {
+		targets := strings.Fields(matched[2])
+		for _, target := range targets {
+			if r.targetSegment == target {
+				r.isCollectableSegment = true
+				break
+			}
+		}
+	}
 	r.state = SEGMENT_STARTS
 }
 
 func (r *segmentLinesCollector) finishSegment(line string) {
-	if SEGMENT_NAME_REG_EXP.MatchString(line) {
-		r.startSegment(line)
+	if r.isTargetSegmentFound {
+		r.state = TARGET_SEGMENT_FINISHED
+		return
+	}
+	r.isCollectableSegment = false
+	matched := SEGMENT_NAME_REG_EXP.FindStringSubmatch(line)
+	if matched != nil {
+		r.startSegment(matched)
 	} else {
 		r.appendLine(line)
 		r.state = SEGMENT_NOT_DEFINED
@@ -46,8 +62,9 @@ func (r *segmentLinesCollector) finishSegment(line string) {
 func (r *segmentLinesCollector) collectLine(line string) {
 	switch r.state {
 	case SEGMENT_NOT_DEFINED:
-		if SEGMENT_NAME_REG_EXP.MatchString(line) {
-			r.startSegment(line)
+		matched := SEGMENT_NAME_REG_EXP.FindStringSubmatch(line)
+		if matched != nil {
+			r.startSegment(matched)
 		} else {
 			r.appendLine(line)
 		}
@@ -57,16 +74,12 @@ func (r *segmentLinesCollector) collectLine(line string) {
 			r.segmentIndentation = matches[1]
 			r.appendSegmentLine(line)
 			r.state = SEGMENT_CONTINUED
-		} else if r.isSegmentFound {
-			r.state = TARGET_SEGMENT_FINISHED
 		} else {
 			r.finishSegment(line)
 		}
 	case SEGMENT_CONTINUED:
 		if strings.HasPrefix(line, r.segmentIndentation) {
 			r.appendSegmentLine(line)
-		} else if r.isSegmentFound {
-			r.state = TARGET_SEGMENT_FINISHED
 		} else {
 			r.finishSegment(line)
 		}
@@ -83,7 +96,7 @@ func (r *segmentLinesCollector) CollectLines(scanner *bufio.Scanner) (bool, erro
 	if err := scanner.Err(); err != nil {
 		return false, err
 	}
-	return r.isSegmentFound, nil
+	return r.isTargetSegmentFound, nil
 }
 
 func (r *segmentLinesCollector) GetLines() string {
