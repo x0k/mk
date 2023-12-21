@@ -7,9 +7,9 @@ import (
 	"strings"
 )
 
-func makePrinter(lines string) LinesPrinter {
+func makePrinter(lines string, args []string) LinesPrinter {
 	if strings.HasPrefix(lines, "#!") {
-		return NewCmdLinesPrinter(os.Args[2:])
+		return NewCmdLinesPrinter(args)
 	} else {
 		return StdLinesPrinter
 	}
@@ -34,8 +34,10 @@ func main() {
 	scanner := bufio.NewScanner(file)
 	var collector LinesCollector
 	targetSegment := "all"
+	printerArgs := []string{}
 	if len(os.Args) > 1 {
 		targetSegment = os.Args[1]
+		printerArgs = os.Args[2:]
 	}
 	collector = NewSegmentLinesCollector(targetSegment)
 	isSegmentFound, err := collector.CollectLines(scanner)
@@ -49,7 +51,7 @@ func main() {
 	if len(lines) < 1 {
 		log.Fatal("Segment is empty")
 	}
-	printer := makePrinter(lines)
+	printer := makePrinter(lines, printerArgs)
 	if err != nil {
 		log.Fatal("Error during creating printer ", err)
 	}
