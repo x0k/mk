@@ -30,16 +30,19 @@ func (r *segmentLinesCollector) appendSegmentLine(line string) {
 	}
 }
 
-func (r *segmentLinesCollector) startSegment(matched []string) {
+func (r *segmentLinesCollector) tryStartSegment(line string) bool {
+	matched := SEGMENT_NAME_REG_EXP.FindStringSubmatch(line)
+	if matched == nil {
+		return false
+	}
 	r.state = SEGMENT_STARTS
 	if r.targetSegment == matched[1] {
 		r.isTargetSegmentFound = true
-		return
-	}
-	if r.targetSegment == DEFAULT_TARGET_SEGMENT || (len(matched) > 2 && strings.Contains(matched[2], r.targetSegment)) {
+	} else if r.targetSegment == DEFAULT_TARGET_SEGMENT ||
+		(len(matched) > 2 && strings.Contains(matched[2], r.targetSegment)) {
 		r.isCollectableSegment = true
-		return
 	}
+	return true
 }
 
 func (r *segmentLinesCollector) finishSegment(line string) {
@@ -48,10 +51,7 @@ func (r *segmentLinesCollector) finishSegment(line string) {
 		return
 	}
 	r.isCollectableSegment = false
-	matched := SEGMENT_NAME_REG_EXP.FindStringSubmatch(line)
-	if matched != nil {
-		r.startSegment(matched)
-	} else {
+	if !r.tryStartSegment(line) {
 		r.appendLine(line)
 		r.state = SEGMENT_NOT_DEFINED
 	}
@@ -60,10 +60,7 @@ func (r *segmentLinesCollector) finishSegment(line string) {
 func (r *segmentLinesCollector) collectLine(line string) {
 	switch r.state {
 	case SEGMENT_NOT_DEFINED:
-		matched := SEGMENT_NAME_REG_EXP.FindStringSubmatch(line)
-		if matched != nil {
-			r.startSegment(matched)
-		} else {
+		if !r.tryStartSegment(line) {
 			r.appendLine(line)
 		}
 	case SEGMENT_STARTS:
