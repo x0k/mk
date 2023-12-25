@@ -35,7 +35,7 @@ func main() {
 		targetSegment = os.Args[1]
 		printerArgs = os.Args[2:]
 	}
-	collector := NewSegmentsCollector(file, targetSegment)
+	collector := NewSegmentsScanner(file, targetSegment)
 	isSegmentFound := collector.Scan()
 	if err != nil {
 		log.Fatal("Error during collecting segment lines ", err)

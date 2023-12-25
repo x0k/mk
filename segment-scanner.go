@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-type segmentCollector struct {
+type segmentsScanner struct {
 	scanner                 *bufio.Scanner
 	state                   int
 	targetSegment           string
@@ -18,29 +18,29 @@ type segmentCollector struct {
 	err                     error
 }
 
-func NewSegmentsCollector(reader io.Reader, targetSegment string) *segmentCollector {
-	return &segmentCollector{
+func NewSegmentsScanner(reader io.Reader, targetSegment string) *segmentsScanner {
+	return &segmentsScanner{
 		scanner:       bufio.NewScanner(reader),
 		targetSegment: targetSegment,
 	}
 }
 
-func (r *segmentCollector) setToken(line string) {
+func (r *segmentsScanner) setToken(line string) {
 	r.segmentBuilder.WriteString(line)
 	r.segmentBuilder.WriteByte('\n')
 }
 
-func (r *segmentCollector) isCollectable() bool {
+func (r *segmentsScanner) isCollectable() bool {
 	return r.isTargetSegmentFound || r.isTargetToTargetSegment
 }
 
-func (r *segmentCollector) setSegmentToken(line string) {
+func (r *segmentsScanner) setSegmentToken(line string) {
 	if r.isCollectable() {
 		r.setToken(strings.TrimPrefix(line, r.segmentIndentation))
 	}
 }
 
-func (r *segmentCollector) tryStartSegment(line string) bool {
+func (r *segmentsScanner) tryStartSegment(line string) bool {
 	matched := SEGMENT_NAME_REG_EXP.FindStringSubmatch(line)
 	if matched == nil {
 		return false
@@ -55,7 +55,7 @@ func (r *segmentCollector) tryStartSegment(line string) bool {
 	return true
 }
 
-func (r *segmentCollector) finishSegment(line string) bool {
+func (r *segmentsScanner) finishSegment(line string) bool {
 	if r.isTargetSegmentFound {
 		r.state = TARGET_SEGMENT_FINISHED
 		r.done = true
@@ -71,7 +71,7 @@ func (r *segmentCollector) finishSegment(line string) bool {
 	return wasCollectable
 }
 
-func (r *segmentCollector) processLine(line string) bool {
+func (r *segmentsScanner) processLine(line string) bool {
 	switch r.state {
 	case SEGMENT_NOT_DEFINED:
 		if r.tryStartSegment(line) {
@@ -98,7 +98,7 @@ func (r *segmentCollector) processLine(line string) bool {
 	return false
 }
 
-func (r *segmentCollector) Scan() bool {
+func (r *segmentsScanner) Scan() bool {
 	if r.done {
 		return false
 	}
@@ -119,10 +119,10 @@ func (r *segmentCollector) Scan() bool {
 	return false
 }
 
-func (r *segmentCollector) Err() error {
+func (r *segmentsScanner) Err() error {
 	return r.err
 }
 
-func (r *segmentCollector) Text() string {
+func (r *segmentsScanner) Text() string {
 	return r.segmentBuilder.String()
 }
