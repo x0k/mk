@@ -1,14 +1,9 @@
 package main
 
 import (
-	"bufio"
+	"errors"
 	"regexp"
 )
-
-type LinesCollector interface {
-	CollectLines(scanner *bufio.Scanner) (bool, error)
-	Lines() string
-}
 
 type LinesPrinter interface {
 	Print(lines string) error
@@ -24,3 +19,4 @@ const (
 
 var SEGMENT_NAME_REG_EXP = regexp.MustCompile(`^([A-z][0-9A-z_-]*):(.*)$`)
 var SEGMENT_INDENT_REG_EXP = regexp.MustCompile(`^([ \t]+)`)
+var ErrSegmentNotFound = errors.New("Segment not found")

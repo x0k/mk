@@ -9,7 +9,7 @@ type cmdLinesPrinter struct {
 	args []string
 }
 
-func NewCmdLinesPrinter(args []string) LinesPrinter {
+func NewCmdLinesPrinter(args []string) *cmdLinesPrinter {
 	return &cmdLinesPrinter{
 		args: args,
 	}
