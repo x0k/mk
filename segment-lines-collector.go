@@ -25,23 +25,21 @@ func (r *segmentLinesCollector) appendLine(line string) {
 }
 
 func (r *segmentLinesCollector) appendSegmentLine(line string) {
-	if r.isCollectableSegment || r.isTargetSegmentFound {
+	if r.isTargetSegmentFound || r.isCollectableSegment {
 		r.appendLine(strings.TrimPrefix(line, r.segmentIndentation))
 	}
 }
 
 func (r *segmentLinesCollector) startSegment(matched []string) {
-	r.isTargetSegmentFound = r.targetSegment == matched[1]
-	if !r.isTargetSegmentFound && len(matched) > 2 {
-		targets := strings.Fields(matched[2])
-		for _, target := range targets {
-			if r.targetSegment == target {
-				r.isCollectableSegment = true
-				break
-			}
-		}
-	}
 	r.state = SEGMENT_STARTS
+	if r.targetSegment == matched[1] {
+		r.isTargetSegmentFound = true
+		return
+	}
+	if r.targetSegment == DEFAULT_TARGET_SEGMENT || (len(matched) > 2 && strings.Contains(matched[2], r.targetSegment)) {
+		r.isCollectableSegment = true
+		return
+	}
 }
 
 func (r *segmentLinesCollector) finishSegment(line string) {
@@ -96,9 +94,9 @@ func (r *segmentLinesCollector) CollectLines(scanner *bufio.Scanner) (bool, erro
 	if err := scanner.Err(); err != nil {
 		return false, err
 	}
-	return r.isTargetSegmentFound, nil
+	return r.isTargetSegmentFound || r.targetSegment == DEFAULT_TARGET_SEGMENT, nil
 }
 
-func (r *segmentLinesCollector) GetLines() string {
+func (r *segmentLinesCollector) Lines() string {
 	return r.lines
 }

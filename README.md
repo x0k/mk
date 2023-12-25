@@ -104,6 +104,28 @@ test:
   echo "test"
 ```
 
+### Default target interruption
+
+`mkfile` file
+
+```shell
+#!/usr/bin/bash
+prepare: build
+  echo "prepare"
+build:
+  echo "build"
+all:
+clean:
+  echo "clean"
+```
+
+`mk` output
+
+```shell
+prepare
+build
+```
+
 ## Installation
 
 ### Via `go install`
@@ -118,7 +140,7 @@ go install github.com/x0k/mk@latest
 
 - The segment defined by a label (and optional targets) that satisfies this regular expression `^[A-Za-z][0-9A-Za-z_-]*:(.*)$` and by the presence of equal indentation `^([ \t]+)` on the subsequent lines.
 
-  By default segment is not defined.
+  By default segment is not defined, all segments use `all` as the target.
 
 - The end of a segment is determined by indentation changes or the end of the file.
 - If segment is not defined for a line, the line will be added to each segment defined below.

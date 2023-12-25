@@ -7,7 +7,7 @@ import (
 
 type LinesCollector interface {
 	CollectLines(scanner *bufio.Scanner) (bool, error)
-	GetLines() string
+	Lines() string
 }
 
 type LinesPrinter interface {
@@ -15,6 +15,7 @@ type LinesPrinter interface {
 }
 
 const (
+	DEFAULT_TARGET_SEGMENT  = "all"
 	SEGMENT_NOT_DEFINED     = 0
 	SEGMENT_STARTS          = 1
 	SEGMENT_CONTINUED       = 2

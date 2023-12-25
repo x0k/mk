@@ -33,7 +33,7 @@ func main() {
 	defer file.Close()
 	scanner := bufio.NewScanner(file)
 	var collector LinesCollector
-	targetSegment := "all"
+	targetSegment := DEFAULT_TARGET_SEGMENT
 	printerArgs := []string{}
 	if len(os.Args) > 1 {
 		targetSegment = os.Args[1]
@@ -47,7 +47,7 @@ func main() {
 	if !isSegmentFound {
 		log.Fatalf("Segment \"%s\" not found ", targetSegment)
 	}
-	lines := collector.GetLines()
+	lines := collector.Lines()
 	if len(lines) < 1 {
 		log.Fatal("Segment is empty")
 	}
