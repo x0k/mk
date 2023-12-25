@@ -7,22 +7,32 @@ import (
 )
 
 type segmentsScanner struct {
-	scanner                 *bufio.Scanner
-	state                   int
-	targetSegment           string
-	isTargetToTargetSegment bool
-	isTargetSegmentFound    bool
-	segmentIndentation      string
-	segmentBuilder          strings.Builder
-	done                    bool
-	err                     error
+	scanner            *bufio.Scanner
+	currentState       SegmentsScannerState
+	currentSegment     string
+	currentTargets     string
+	lastState          SegmentsScannerState
+	lastSegment        string
+	lastTargets        string
+	segmentIndentation string
+	segmentBuilder     strings.Builder
+	done               bool
+	err                error
 }
 
-func NewSegmentsScanner(reader io.Reader, targetSegment string) *segmentsScanner {
+func NewSegmentsScanner(reader io.Reader) *segmentsScanner {
 	return &segmentsScanner{
-		scanner:       bufio.NewScanner(reader),
-		targetSegment: targetSegment,
+		scanner: bufio.NewScanner(reader),
 	}
+}
+
+func (r *segmentsScanner) setState(state SegmentsScannerState, segment string, targets string) {
+	r.lastState = r.currentState
+	r.lastSegment = r.currentSegment
+	r.lastTargets = r.currentTargets
+	r.currentState = state
+	r.currentSegment = segment
+	r.currentTargets = targets
 }
 
 func (r *segmentsScanner) setToken(line string) {
@@ -30,14 +40,8 @@ func (r *segmentsScanner) setToken(line string) {
 	r.segmentBuilder.WriteByte('\n')
 }
 
-func (r *segmentsScanner) isCollectable() bool {
-	return r.isTargetSegmentFound || r.isTargetToTargetSegment
-}
-
 func (r *segmentsScanner) setSegmentToken(line string) {
-	if r.isCollectable() {
-		r.setToken(strings.TrimPrefix(line, r.segmentIndentation))
-	}
+	r.setToken(strings.TrimPrefix(line, r.segmentIndentation))
 }
 
 func (r *segmentsScanner) tryStartSegment(line string) bool {
@@ -45,37 +49,22 @@ func (r *segmentsScanner) tryStartSegment(line string) bool {
 	if matched == nil {
 		return false
 	}
-	r.state = SEGMENT_STARTS
-	if r.targetSegment == matched[1] {
-		r.isTargetSegmentFound = true
-	} else if r.targetSegment == DEFAULT_TARGET_SEGMENT ||
-		(len(matched) > 2 && strings.Contains(matched[2], r.targetSegment)) {
-		r.isTargetToTargetSegment = true
-	}
+	r.setState(SEGMENT_STARTS, matched[1], matched[2])
 	return true
 }
 
-func (r *segmentsScanner) finishSegment(line string) bool {
-	if r.isTargetSegmentFound {
-		r.state = TARGET_SEGMENT_FINISHED
-		r.done = true
-		return true
+func (r *segmentsScanner) finishSegment(line string) {
+	if !r.tryStartSegment(line) {
+		r.setState(SEGMENT_NOT_DEFINED, "", "")
+		r.setToken(line)
 	}
-	wasCollectable := r.isTargetToTargetSegment
-	r.isTargetToTargetSegment = false
-	if r.tryStartSegment(line) {
-		return wasCollectable || r.isCollectable()
-	}
-	r.state = SEGMENT_NOT_DEFINED
-	r.setToken(line)
-	return wasCollectable
 }
 
 func (r *segmentsScanner) processLine(line string) bool {
-	switch r.state {
+	switch r.currentState {
 	case SEGMENT_NOT_DEFINED:
 		if r.tryStartSegment(line) {
-			return r.isCollectable()
+			return true
 		} else {
 			r.setToken(line)
 		}
@@ -83,19 +72,28 @@ func (r *segmentsScanner) processLine(line string) bool {
 		matches := SEGMENT_INDENT_REG_EXP.FindStringSubmatch(line)
 		if matches != nil {
 			r.segmentIndentation = matches[1]
-			r.state = SEGMENT_CONTINUED
+			r.currentState = SEGMENT_CONTINUED
 			r.setSegmentToken(line)
 		} else {
-			return r.finishSegment(line)
+			r.finishSegment(line)
+			return true
 		}
 	case SEGMENT_CONTINUED:
 		if strings.HasPrefix(line, r.segmentIndentation) {
 			r.setSegmentToken(line)
 		} else {
-			return r.finishSegment(line)
+			r.finishSegment(line)
+			return true
 		}
 	}
 	return false
+}
+
+func (r *segmentsScanner) State() (state SegmentsScannerState, segment string, targets string) {
+	state = r.lastState
+	segment = r.lastSegment
+	targets = r.lastTargets
+	return
 }
 
 func (r *segmentsScanner) Scan() bool {
@@ -112,8 +110,6 @@ func (r *segmentsScanner) Scan() bool {
 	}
 	if err := r.scanner.Err(); err != nil {
 		r.err = err
-	} else if !r.isTargetSegmentFound && r.targetSegment != DEFAULT_TARGET_SEGMENT {
-		r.err = ErrSegmentNotFound
 	}
 	r.done = true
 	return false
