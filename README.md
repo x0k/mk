@@ -33,9 +33,11 @@ go clean
 rm -f ./bin/${TARGET}
 ```
 
-### Shebang
+### X suffix
 
-`mkfile` file
+If file contains `x` suffix, then result of preprocessing will be saved as tmp file and executed.
+
+`mkfilex` file
 
 ```shell
 #!/usr/bin/bash
@@ -64,7 +66,11 @@ two
 
 ### Targets
 
-`mkfile` file
+Each segment can define its targets.
+
+If segment targets **contains** current target segment, then that segment will be included in the result.
+
+`mkfilex` file
 
 ```shell
 #!/usr/bin/bash
@@ -91,7 +97,7 @@ build
 clean
 ```
 
-The equivalent `mkfile`
+The equivalent `mkfilex`
 
 ```shell
 #!/usr/bin/bash
@@ -104,9 +110,15 @@ test:
   echo "test"
 ```
 
-### Default target interruption
+### Default target
 
-`mkfile` file
+By default target segment is `all`.
+All segments are implicitly declare `all` as their target.
+So `mk` command will include all segments in the result.
+
+If you want to exclude some segments from `mk` result, then define them after `all` segment.
+
+`mkfilex` file
 
 ```shell
 #!/usr/bin/bash
@@ -140,9 +152,8 @@ go install github.com/x0k/mk@latest
 
 - The segment defined by a label (and optional targets) that satisfies this regular expression `^[A-Za-z][0-9A-Za-z_-]*:(.*)$` and by the presence of equal indentation `^([ \t]+)` on the subsequent lines.
 
-  By default segment is not defined, all segments use `all` as the target.
+  By default segment is not defined.
 
 - The end of a segment is determined by indentation changes or the end of the file.
 - If segment is not defined for a line, the line will be added to each segment defined below.
-- Allowed file names `mkfile`, `Mkfile`.
-- By default target segment is `all`.
+- Allowed file names `mkfilex`, `mkfile`, `Mkfilex`, `Mkfile`.
