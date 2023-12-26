@@ -5,8 +5,9 @@ import (
 	"regexp"
 )
 
-type LinesPrinter interface {
-	Print(lines string) error
+type BufferedWriter interface {
+	WriteString(string) (int, error)
+	Flush() error
 }
 
 const DEFAULT_TARGET_SEGMENT = "all"
@@ -19,6 +20,7 @@ const (
 	SEGMENT_CONTINUED
 )
 
+var MK_FILE_NAMES = []string{"mkfilex", "mkfile", "Mkfilex", "Mkfile"}
 var SEGMENT_NAME_REG_EXP = regexp.MustCompile(`^([A-z][0-9A-z_-]*):(.*)$`)
 var SEGMENT_INDENT_REG_EXP = regexp.MustCompile(`^([ \t]+)`)
 var ErrSegmentNotFound = errors.New("Segment not found")

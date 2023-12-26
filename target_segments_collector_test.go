@@ -8,7 +8,7 @@ import (
 func TestCollectSegment(t *testing.T) {
 	builder := strings.Builder{}
 	target := "baz"
-	collector := NewTargetSegmentsCollector(&builder, target)
+	collector := NewTargetSegmentsCollector(target)
 	scanner := NewSegmentsScanner(strings.NewReader(`#!/bin/bash -xe
 foo: baz
 	foo
@@ -20,7 +20,7 @@ foo
 bar
 baz
 `
-	err := collector.Collect(scanner)
+	err := collector.Collect(scanner, &builder)
 	if err != nil {
 		t.Errorf("Error during collecting segments %q", err)
 	}
@@ -31,7 +31,7 @@ baz
 
 func TestCollectDefaultSegment(t *testing.T) {
 	builder := strings.Builder{}
-	collector := NewTargetSegmentsCollector(&builder, DEFAULT_TARGET_SEGMENT)
+	collector := NewTargetSegmentsCollector(DEFAULT_TARGET_SEGMENT)
 	scanner := NewSegmentsScanner(strings.NewReader(`#!/bin/bash -xe
 foo: baz
 	foo
@@ -42,7 +42,7 @@ baz`))
 foo
 bar
 `
-	err := collector.Collect(scanner)
+	err := collector.Collect(scanner, &builder)
 	if err != nil {
 		t.Errorf("Error during collecting segments %q", err)
 	}
@@ -54,13 +54,13 @@ bar
 func TestSegmentNotFound(t *testing.T) {
 	builder := strings.Builder{}
 	target := "bar"
-	collector := NewTargetSegmentsCollector(&builder, target)
+	collector := NewTargetSegmentsCollector(target)
 	scanner := NewSegmentsScanner(strings.NewReader(`foo: baz
 	foo
 bar
 baz:
 	baz`))
-	err := collector.Collect(scanner)
+	err := collector.Collect(scanner, &builder)
 	if err != ErrSegmentNotFound {
 		t.Errorf("Expected %q, got %q", ErrSegmentNotFound, err)
 	}

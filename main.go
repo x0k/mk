@@ -1,25 +1,23 @@
 package main
 
 import (
+	"bufio"
 	"log"
 	"os"
 	"strings"
 )
 
-func makePrinter(lines string, args []string) LinesPrinter {
-	if strings.HasPrefix(lines, "#!") {
-		return NewCmdLinesPrinter(args)
-	} else {
-		return StdLinesPrinter
+func makeWriter(file *os.File, args []string) (BufferedWriter, error) {
+	if strings.HasSuffix(file.Name(), "x") {
+		return NewCmdWriter(args)
 	}
+	return bufio.NewWriter(os.Stdout), nil
 }
-
-var fileNames = []string{"mkfile", "Mkfile"}
 
 func main() {
 	var file *os.File
 	var err error
-	for _, fileName := range fileNames {
+	for _, fileName := range MK_FILE_NAMES {
 		file, err = os.Open(fileName)
 		if err == nil {
 			defer file.Close()
@@ -27,28 +25,27 @@ func main() {
 		}
 	}
 	if err != nil {
-		log.Fatal("Mkfile not found, allowed file names: ", strings.Join(fileNames, ", "))
+		log.Fatal("Mkfile not found, allowed file names: ", strings.Join(MK_FILE_NAMES, ", "))
 	}
 	targetSegment := DEFAULT_TARGET_SEGMENT
-	printerArgs := []string{}
+	args := []string{}
 	if len(os.Args) > 1 {
 		targetSegment = os.Args[1]
-		printerArgs = os.Args[2:]
+		args = os.Args[2:]
 	}
-	builder := strings.Builder{}
-	collector := NewTargetSegmentsCollector(&builder, targetSegment)
-	scanner := NewSegmentsScanner(file)
-	err = collector.Collect(scanner)
+	writer, err := makeWriter(file, args)
 	if err != nil {
-		log.Fatalf("Error during collecting segments %q", err)
+		log.Fatal("error during creating writer ", err)
 	}
-	lines := builder.String()
-	if len(lines) < 1 {
-		log.Fatal("Segment is empty")
+	err = NewTargetSegmentsCollector(targetSegment).Collect(NewSegmentsScanner(file), writer)
+	if err == ErrSegmentNotFound {
+		log.Fatalf("segment %q not found", targetSegment)
 	}
-	printer := makePrinter(lines, printerArgs)
-	err = printer.Print(lines)
 	if err != nil {
-		log.Fatal("Error during printing ", err)
+		log.Fatal("error during collecting segments ", err)
+	}
+	err = writer.Flush()
+	if err != nil {
+		log.Fatal("error during printing ", err)
 	}
 }
