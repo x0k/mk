@@ -35,15 +35,17 @@ func main() {
 		targetSegment = os.Args[1]
 		printerArgs = os.Args[2:]
 	}
-	collector := NewSegmentsScanner(file, targetSegment)
-	isSegmentFound := collector.Scan()
+	builder := strings.Builder{}
+	collector := NewSegmentsCollector(&builder, targetSegment)
+	scanner := NewSegmentsScanner(file)
+	isSegmentFound, err := collector.Collect(scanner)
 	if err != nil {
-		log.Fatal("Error during collecting segment lines ", err)
+		log.Fatalf("Error during collecting segments \"%v\"", err)
 	}
 	if !isSegmentFound {
 		log.Fatalf("Segment \"%s\" not found ", targetSegment)
 	}
-	lines := collector.Text()
+	lines := builder.String()
 	if len(lines) < 1 {
 		log.Fatal("Segment is empty")
 	}

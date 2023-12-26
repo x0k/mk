@@ -14,10 +14,10 @@ type segmentsScanner struct {
 	lastState          SegmentsScannerState
 	lastSegment        string
 	lastTargets        string
+	lastSegmentContent string
 	segmentIndentation string
 	segmentBuilder     strings.Builder
 	done               bool
-	err                error
 }
 
 func NewSegmentsScanner(reader io.Reader) *segmentsScanner {
@@ -30,6 +30,8 @@ func (r *segmentsScanner) setState(state SegmentsScannerState, segment string, t
 	r.lastState = r.currentState
 	r.lastSegment = r.currentSegment
 	r.lastTargets = r.currentTargets
+	r.lastSegmentContent = r.segmentBuilder.String()
+	r.segmentBuilder.Reset()
 	r.currentState = state
 	r.currentSegment = segment
 	r.currentTargets = targets
@@ -100,25 +102,24 @@ func (r *segmentsScanner) Scan() bool {
 	if r.done {
 		return false
 	}
-	r.segmentBuilder.Reset()
-	isSegmentUpdated := false
-	for !isSegmentUpdated && r.scanner.Scan() {
-		isSegmentUpdated = r.processLine(r.scanner.Text())
-	}
-	if isSegmentUpdated {
-		return !r.done
-	}
-	if err := r.scanner.Err(); err != nil {
-		r.err = err
+	for r.scanner.Scan() {
+		if r.processLine(r.scanner.Text()) {
+			return true
+		}
 	}
 	r.done = true
+	// To process last segment
+	if r.segmentBuilder.Len() > 0 {
+		r.setState(SEGMENT_NOT_DEFINED, "", "")
+		return true
+	}
 	return false
 }
 
 func (r *segmentsScanner) Err() error {
-	return r.err
+	return r.scanner.Err()
 }
 
 func (r *segmentsScanner) Text() string {
-	return r.segmentBuilder.String()
+	return r.lastSegmentContent
 }
