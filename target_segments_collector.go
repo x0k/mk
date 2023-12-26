@@ -21,12 +21,12 @@ type SegmentsScanner interface {
 	State() (state SegmentsScannerState, segment string, targets string)
 }
 
-func (c *targetSegmentsCollector) Collect(scanner SegmentsScanner) (bool, error) {
+func (c *targetSegmentsCollector) Collect(scanner SegmentsScanner) error {
 	for scanner.Scan() {
 		state, segment, targets := scanner.State()
 		if segment == c.targetSegment {
 			c.writer.WriteString(scanner.Text())
-			return true, nil
+			return nil
 		}
 		if state == SEGMENT_NOT_DEFINED ||
 			c.targetSegment == DEFAULT_TARGET_SEGMENT ||
@@ -35,7 +35,10 @@ func (c *targetSegmentsCollector) Collect(scanner SegmentsScanner) (bool, error)
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		return false, err
+		return err
 	}
-	return c.targetSegment == DEFAULT_TARGET_SEGMENT, nil
+	if c.targetSegment != DEFAULT_TARGET_SEGMENT {
+		return ErrSegmentNotFound
+	}
+	return nil
 }

@@ -12,7 +12,7 @@ type segmentData struct {
 	text    string
 }
 
-func TestSegmentsScanner(t *testing.T) {
+func TestCompactScan(t *testing.T) {
 	scanner := NewSegmentsScanner(strings.NewReader(`foo: bar baz
 	foo-content
 common-content
@@ -48,7 +48,7 @@ all:`))
 	}
 }
 
-func TestSegmentsScanner2(t *testing.T) {
+func TestSpacesScan(t *testing.T) {
 	scanner := NewSegmentsScanner(strings.NewReader(`#!/bin/bash -xe
 
 foo:

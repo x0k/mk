@@ -38,12 +38,9 @@ func main() {
 	builder := strings.Builder{}
 	collector := NewTargetSegmentsCollector(&builder, targetSegment)
 	scanner := NewSegmentsScanner(file)
-	isSegmentFound, err := collector.Collect(scanner)
+	err = collector.Collect(scanner)
 	if err != nil {
-		log.Fatalf("Error during collecting segments \"%v\"", err)
-	}
-	if !isSegmentFound {
-		log.Fatalf("Segment \"%s\" not found ", targetSegment)
+		log.Fatalf("Error during collecting segments %q", err)
 	}
 	lines := builder.String()
 	if len(lines) < 1 {
