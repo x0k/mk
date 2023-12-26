@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"log"
 	"os"
 	"strings"
@@ -30,31 +29,24 @@ func main() {
 	if err != nil {
 		log.Fatal("Mkfile not found, allowed file names: ", strings.Join(fileNames, ", "))
 	}
-	defer file.Close()
-	scanner := bufio.NewScanner(file)
-	var collector LinesCollector
 	targetSegment := DEFAULT_TARGET_SEGMENT
 	printerArgs := []string{}
 	if len(os.Args) > 1 {
 		targetSegment = os.Args[1]
 		printerArgs = os.Args[2:]
 	}
-	collector = NewSegmentLinesCollector(targetSegment)
-	isSegmentFound, err := collector.CollectLines(scanner)
+	builder := strings.Builder{}
+	collector := NewTargetSegmentsCollector(&builder, targetSegment)
+	scanner := NewSegmentsScanner(file)
+	err = collector.Collect(scanner)
 	if err != nil {
-		log.Fatal("Error during collecting segment lines ", err)
+		log.Fatalf("Error during collecting segments %q", err)
 	}
-	if !isSegmentFound {
-		log.Fatalf("Segment \"%s\" not found ", targetSegment)
-	}
-	lines := collector.Lines()
+	lines := builder.String()
 	if len(lines) < 1 {
 		log.Fatal("Segment is empty")
 	}
 	printer := makePrinter(lines, printerArgs)
-	if err != nil {
-		log.Fatal("Error during creating printer ", err)
-	}
 	err = printer.Print(lines)
 	if err != nil {
 		log.Fatal("Error during printing ", err)
