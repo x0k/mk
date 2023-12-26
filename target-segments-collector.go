@@ -5,13 +5,13 @@ import (
 	"strings"
 )
 
-type segmentsCollector struct {
+type targetSegmentsCollector struct {
 	targetSegment string
 	writer        io.StringWriter
 }
 
-func NewSegmentsCollector(writer io.StringWriter, targetSegment string) *segmentsCollector {
-	return &segmentsCollector{writer: writer, targetSegment: targetSegment}
+func NewTargetSegmentsCollector(writer io.StringWriter, targetSegment string) *targetSegmentsCollector {
+	return &targetSegmentsCollector{writer: writer, targetSegment: targetSegment}
 }
 
 type SegmentsScanner interface {
@@ -21,7 +21,7 @@ type SegmentsScanner interface {
 	State() (state SegmentsScannerState, segment string, targets string)
 }
 
-func (c *segmentsCollector) Collect(scanner SegmentsScanner) (bool, error) {
+func (c *targetSegmentsCollector) Collect(scanner SegmentsScanner) (bool, error) {
 	for scanner.Scan() {
 		state, segment, targets := scanner.State()
 		if segment == c.targetSegment {

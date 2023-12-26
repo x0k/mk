@@ -36,7 +36,7 @@ func main() {
 		printerArgs = os.Args[2:]
 	}
 	builder := strings.Builder{}
-	collector := NewSegmentsCollector(&builder, targetSegment)
+	collector := NewTargetSegmentsCollector(&builder, targetSegment)
 	scanner := NewSegmentsScanner(file)
 	isSegmentFound, err := collector.Collect(scanner)
 	if err != nil {
