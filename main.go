@@ -38,6 +38,9 @@ func main() {
 		log.Fatal("error during creating writer ", err)
 	}
 	err = NewTargetSegmentsCollector(targetSegment).Collect(NewSegmentsScanner(file), writer)
+	if err == ErrSegmentNotFound {
+		log.Fatalf("segment %q not found", targetSegment)
+	}
 	if err != nil {
 		log.Fatal("error during collecting segments ", err)
 	}
