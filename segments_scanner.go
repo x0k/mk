@@ -66,7 +66,7 @@ func (r *segmentsScanner) processLine(line string) bool {
 	switch r.currentState {
 	case SEGMENT_NOT_DEFINED:
 		if r.tryStartSegment(line) {
-			return true
+			return r.lastState != SEGMENT_NOT_DEFINED || len(r.lastSegmentContent) > 0
 		} else {
 			r.setToken(line)
 		}
