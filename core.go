@@ -2,12 +2,24 @@ package main
 
 import (
 	"errors"
+	"io"
 	"regexp"
 )
 
 type BufferedWriter interface {
 	WriteString(string) (int, error)
 	Flush() error
+}
+
+type SegmentsScanner interface {
+	Scan() bool
+	Err() error
+	Text() string
+	State() (state SegmentsScannerState, segment string, targets string)
+}
+
+type Collector interface {
+	Collect(SegmentsScanner, io.StringWriter) error
 }
 
 const DEFAULT_TARGET_SEGMENT = "all"

@@ -7,11 +7,20 @@ import (
 	"strings"
 )
 
-func makeWriter(file *os.File, args []string) (BufferedWriter, error) {
-	if strings.HasSuffix(file.Name(), "x") {
-		return NewCmdWriter(args)
+const SEGMENTS_FLAG = "--segments"
+
+func makeServices(file *os.File, targetSegment string, args []string) (BufferedWriter, Collector, error) {
+	if targetSegment == SEGMENTS_FLAG {
+		return NewSegmentsWriter(), NewSegmentsCollector(), nil
 	}
-	return bufio.NewWriter(os.Stdout), nil
+	if strings.HasSuffix(file.Name(), "x") {
+		cmdWriter, err := NewCmdWriter(args)
+		if err != nil {
+			return nil, nil, err
+		}
+		return cmdWriter, NewTargetSegmentsCollector(targetSegment), nil
+	}
+	return bufio.NewWriter(os.Stdout), NewTargetSegmentsCollector(targetSegment), nil
 }
 
 func main() {
@@ -33,11 +42,11 @@ func main() {
 		targetSegment = os.Args[1]
 		args = os.Args[2:]
 	}
-	writer, err := makeWriter(file, args)
+	writer, collector, err := makeServices(file, targetSegment, args)
 	if err != nil {
-		log.Fatal("error during creating writer ", err)
+		log.Fatal("error during creating services ", err)
 	}
-	err = NewTargetSegmentsCollector(targetSegment).Collect(NewSegmentsScanner(file), writer)
+	err = collector.Collect(NewSegmentsScanner(file), writer)
 	if err == ErrSegmentNotFound {
 		log.Fatalf("segment %q not found", targetSegment)
 	}

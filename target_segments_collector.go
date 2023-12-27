@@ -13,13 +13,6 @@ func NewTargetSegmentsCollector(targetSegment string) *targetSegmentsCollector {
 	return &targetSegmentsCollector{targetSegment: targetSegment}
 }
 
-type SegmentsScanner interface {
-	Scan() bool
-	Err() error
-	Text() string
-	State() (state SegmentsScannerState, segment string, targets string)
-}
-
 func (c *targetSegmentsCollector) Collect(scanner SegmentsScanner, writer io.StringWriter) error {
 	for scanner.Scan() {
 		state, segment, targets := scanner.State()
