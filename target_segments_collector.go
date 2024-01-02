@@ -17,19 +17,19 @@ type SegmentsScanner interface {
 	Scan() bool
 	Err() error
 	Text() string
-	State() (state SegmentsScannerState, segment string, targets string)
+	State() SegmentsScannerState
 }
 
 func (c *targetSegmentsCollector) Collect(scanner SegmentsScanner, writer io.StringWriter) error {
 	for scanner.Scan() {
-		state, segment, targets := scanner.State()
-		if segment == c.targetSegment {
+		state := scanner.State()
+		if state.Segment == c.targetSegment {
 			writer.WriteString(scanner.Text())
 			return nil
 		}
-		if state == SEGMENT_NOT_DEFINED ||
-			c.targetSegment == DEFAULT_TARGET_SEGMENT ||
-			strings.Contains(targets, c.targetSegment) {
+		if state.Kind == SEGMENT_NOT_DEFINED ||
+			(c.targetSegment == DEFAULT_TARGET_SEGMENT && !state.ExcludeDefaultTarget) ||
+			strings.Contains(state.Targets, c.targetSegment) {
 			writer.WriteString(scanner.Text())
 		}
 	}

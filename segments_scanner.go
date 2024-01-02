@@ -6,14 +6,17 @@ import (
 	"strings"
 )
 
+type SegmentsScannerState struct {
+	Kind                 SegmentsScannerStateKind
+	Segment              string
+	Targets              string
+	ExcludeDefaultTarget bool
+}
+
 type segmentsScanner struct {
 	scanner            *bufio.Scanner
 	currentState       SegmentsScannerState
-	currentSegment     string
-	currentTargets     string
 	lastState          SegmentsScannerState
-	lastSegment        string
-	lastTargets        string
 	lastSegmentContent string
 	segmentIndentation string
 	segmentBuilder     strings.Builder
@@ -26,15 +29,11 @@ func NewSegmentsScanner(reader io.Reader) *segmentsScanner {
 	}
 }
 
-func (r *segmentsScanner) setState(state SegmentsScannerState, segment string, targets string) {
+func (r *segmentsScanner) setState(state SegmentsScannerState) {
 	r.lastState = r.currentState
-	r.lastSegment = r.currentSegment
-	r.lastTargets = r.currentTargets
 	r.lastSegmentContent = r.segmentBuilder.String()
 	r.segmentBuilder.Reset()
 	r.currentState = state
-	r.currentSegment = segment
-	r.currentTargets = targets
 }
 
 func (r *segmentsScanner) setToken(line string) {
@@ -51,22 +50,29 @@ func (r *segmentsScanner) tryStartSegment(line string) bool {
 	if matched == nil {
 		return false
 	}
-	r.setState(SEGMENT_STARTS, matched[1], matched[2])
+	r.setState(SegmentsScannerState{
+		Kind:                 SEGMENT_STARTS,
+		Segment:              matched[1],
+		Targets:              matched[3],
+		ExcludeDefaultTarget: matched[2] == "!",
+	})
 	return true
 }
 
 func (r *segmentsScanner) finishSegment(line string) {
 	if !r.tryStartSegment(line) {
-		r.setState(SEGMENT_NOT_DEFINED, "", "")
+		r.setState(SegmentsScannerState{
+			Kind: SEGMENT_NOT_DEFINED,
+		})
 		r.setToken(line)
 	}
 }
 
 func (r *segmentsScanner) processLine(line string) bool {
-	switch r.currentState {
+	switch r.currentState.Kind {
 	case SEGMENT_NOT_DEFINED:
 		if r.tryStartSegment(line) {
-			return r.lastState != SEGMENT_NOT_DEFINED || len(r.lastSegmentContent) > 0
+			return r.lastState.Kind != SEGMENT_NOT_DEFINED || len(r.lastSegmentContent) > 0
 		} else {
 			r.setToken(line)
 		}
@@ -74,7 +80,7 @@ func (r *segmentsScanner) processLine(line string) bool {
 		matches := SEGMENT_INDENT_REG_EXP.FindStringSubmatch(line)
 		if matches != nil {
 			r.segmentIndentation = matches[1]
-			r.currentState = SEGMENT_CONTINUED
+			r.currentState.Kind = SEGMENT_CONTINUED
 			r.setSegmentToken(line)
 		} else {
 			r.finishSegment(line)
@@ -91,11 +97,8 @@ func (r *segmentsScanner) processLine(line string) bool {
 	return false
 }
 
-func (r *segmentsScanner) State() (state SegmentsScannerState, segment string, targets string) {
-	state = r.lastState
-	segment = r.lastSegment
-	targets = r.lastTargets
-	return
+func (r *segmentsScanner) State() SegmentsScannerState {
+	return r.lastState
 }
 
 func (r *segmentsScanner) Scan() bool {
@@ -110,7 +113,9 @@ func (r *segmentsScanner) Scan() bool {
 	r.done = true
 	// To process last segment
 	if r.segmentBuilder.Len() > 0 {
-		r.setState(SEGMENT_NOT_DEFINED, "", "")
+		r.setState(SegmentsScannerState{
+			Kind: SEGMENT_NOT_DEFINED,
+		})
 		return true
 	}
 	return false
