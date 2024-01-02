@@ -116,13 +116,15 @@ By default target segment is `all`.
 All segments are implicitly declare `all` as their target.
 So `mk` command will include all segments in the result.
 
-If you want to exclude some segments from `mk` result, then define them after `all` segment.
+If you want to exclude some segments from `mk` result, then:
+- define them with exclamation mark `<segment>!`
+- define them after `all` segment
 
 `mkfilex` file
 
 ```shell
 #!/usr/bin/bash
-prepare: build
+prepare!: build
   echo "prepare"
 build:
   echo "build"
@@ -134,7 +136,6 @@ clean:
 `mk` output
 
 ```shell
-prepare
 build
 ```
 
@@ -150,7 +151,7 @@ go install github.com/x0k/mk@latest
 
 ## Explanation
 
-- The segment defined by a label (and optional targets) that satisfies this regular expression `^[A-Za-z][0-9A-Za-z_-]*:(.*)$` and by the presence of equal indentation `^([ \t]+)` on the subsequent lines.
+- The segment defined by a label (and optional targets) that satisfies this regular expression `^[A-Za-z][0-9A-Za-z_-]*!?:(.*)$` and by the presence of equal indentation `^([ \t]+)` on the subsequent lines.
 
   By default segment is not defined.
 

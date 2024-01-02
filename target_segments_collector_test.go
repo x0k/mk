@@ -35,6 +35,8 @@ func TestCollectDefaultSegment(t *testing.T) {
 	scanner := NewSegmentsScanner(strings.NewReader(`#!/bin/bash -xe
 foo: baz
 	foo
+xxx!:
+	excluded
 bar
 all:
 baz`))

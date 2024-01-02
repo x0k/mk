@@ -12,15 +12,15 @@ type BufferedWriter interface {
 
 const DEFAULT_TARGET_SEGMENT = "all"
 
-type SegmentsScannerState int
+type SegmentsScannerStateKind int
 
 const (
-	SEGMENT_NOT_DEFINED SegmentsScannerState = iota
+	SEGMENT_NOT_DEFINED SegmentsScannerStateKind = iota
 	SEGMENT_STARTS
 	SEGMENT_CONTINUED
 )
 
 var MK_FILE_NAMES = []string{"mkfilex", "mkfile", "Mkfilex", "Mkfile"}
-var SEGMENT_NAME_REG_EXP = regexp.MustCompile(`^([A-z][0-9A-z_-]*):(.*)$`)
+var SEGMENT_NAME_REG_EXP = regexp.MustCompile(`^([A-z][0-9A-z_-]*)(!?):(.*)$`)
 var SEGMENT_INDENT_REG_EXP = regexp.MustCompile(`^([ \t]+)`)
-var ErrSegmentNotFound = errors.New("Segment not found")
+var ErrSegmentNotFound = errors.New("segment not found")
