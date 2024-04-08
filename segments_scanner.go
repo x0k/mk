@@ -7,10 +7,9 @@ import (
 )
 
 type SegmentsScannerState struct {
-	Kind                 SegmentsScannerStateKind
-	Segment              string
-	Targets              string
-	ExcludeDefaultTarget bool
+	Kind    SegmentsScannerStateKind
+	Segment string
+	Targets string
 }
 
 type segmentsScanner struct {
@@ -51,10 +50,9 @@ func (r *segmentsScanner) tryStartSegment(line string) bool {
 		return false
 	}
 	r.setState(SegmentsScannerState{
-		Kind:                 SEGMENT_STARTS,
-		Segment:              matched[1],
-		Targets:              matched[3],
-		ExcludeDefaultTarget: matched[2] == "!",
+		Kind:    SEGMENT_STARTS,
+		Segment: matched[1],
+		Targets: matched[2],
 	})
 	return true
 }

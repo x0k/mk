@@ -9,17 +9,17 @@ func TestCompactScan(t *testing.T) {
 	scanner := NewSegmentsScanner(strings.NewReader(`foo: bar baz
 	foo-content
 common-content
-xxx!:
+xxx: !
 	excluded
 bar:
 	bar-content
 all:`))
 	segments := []SegmentsScannerState{
-		{SEGMENT_CONTINUED, "foo", " bar baz", false},
-		{SEGMENT_NOT_DEFINED, "", "", false},
-		{SEGMENT_CONTINUED, "xxx", "", true},
-		{SEGMENT_CONTINUED, "bar", "", false},
-		{SEGMENT_STARTS, "all", "", false},
+		{SEGMENT_CONTINUED, "foo", "bar baz"},
+		{SEGMENT_NOT_DEFINED, "", ""},
+		{SEGMENT_CONTINUED, "xxx", "!"},
+		{SEGMENT_CONTINUED, "bar", ""},
+		{SEGMENT_STARTS, "all", ""},
 	}
 	texts := []string{
 		"foo-content\n",
@@ -45,9 +45,6 @@ all:`))
 		if state.Targets != expectedSegment.Targets {
 			t.Errorf("Expected targets %q, got %q", expectedSegment.Targets, state.Targets)
 		}
-		if state.ExcludeDefaultTarget != expectedSegment.ExcludeDefaultTarget {
-			t.Errorf("Expected exclude default target %t, got %t", expectedSegment.ExcludeDefaultTarget, state.ExcludeDefaultTarget)
-		}
 		if text != texts[i] {
 			t.Errorf("Expected text %q, got %q", texts[i], text)
 		}
@@ -57,7 +54,7 @@ all:`))
 func TestSpacesScan(t *testing.T) {
 	scanner := NewSegmentsScanner(strings.NewReader(`#!/bin/bash -xe
 
-foo!:
+foo: !
 	line-1
 	line-2
 
@@ -65,11 +62,11 @@ all:
 
 `))
 	segments := []SegmentsScannerState{
-		{SEGMENT_NOT_DEFINED, "", "", false},
-		{SEGMENT_CONTINUED, "foo", "", true},
-		{SEGMENT_NOT_DEFINED, "", "", false},
-		{SEGMENT_STARTS, "all", "", false},
-		{SEGMENT_NOT_DEFINED, "", "", false},
+		{SEGMENT_NOT_DEFINED, "", ""},
+		{SEGMENT_CONTINUED, "foo", "!"},
+		{SEGMENT_NOT_DEFINED, "", ""},
+		{SEGMENT_STARTS, "all", ""},
+		{SEGMENT_NOT_DEFINED, "", ""},
 	}
 	texts := []string{
 		"#!/bin/bash -xe\n\n",
@@ -94,9 +91,6 @@ all:
 		}
 		if state.Targets != expectedSegment.Targets {
 			t.Errorf("Expected targets %q, got %q", expectedSegment.Targets, state.Targets)
-		}
-		if state.ExcludeDefaultTarget != expectedSegment.ExcludeDefaultTarget {
-			t.Errorf("Expected exclude default target %t, got %t", expectedSegment.ExcludeDefaultTarget, state.ExcludeDefaultTarget)
 		}
 		if text != texts[i] {
 			t.Errorf("Expected text %q, got %q", texts[i], text)

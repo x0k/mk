@@ -8,3 +8,6 @@ build:
 clean:
 	go clean
 	rm -f ./bin/${TARGET}
+
+test:
+	go test ./

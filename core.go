@@ -21,6 +21,6 @@ const (
 )
 
 var MK_FILE_NAMES = []string{"mkfilex", "mkfile", "Mkfilex", "Mkfile"}
-var SEGMENT_NAME_REG_EXP = regexp.MustCompile(`^([A-z][0-9A-z_-]*)(!?):(.*)$`)
+var SEGMENT_NAME_REG_EXP = regexp.MustCompile(`^([A-z][0-9A-z_-]*):\s*(.*?)\s*$`)
 var SEGMENT_INDENT_REG_EXP = regexp.MustCompile(`^([ \t]+)`)
 var ErrSegmentNotFound = errors.New("segment not found")

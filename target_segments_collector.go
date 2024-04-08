@@ -24,13 +24,15 @@ func (c *targetSegmentsCollector) Collect(scanner SegmentsScanner, writer io.Str
 	for scanner.Scan() {
 		state := scanner.State()
 		if state.Segment == c.targetSegment {
-			writer.WriteString(scanner.Text())
-			return nil
+			_, err := writer.WriteString(scanner.Text())
+			return err
 		}
 		if state.Kind == SEGMENT_NOT_DEFINED ||
-			(c.targetSegment == DEFAULT_TARGET_SEGMENT && !state.ExcludeDefaultTarget) ||
+			(c.targetSegment == DEFAULT_TARGET_SEGMENT && state.Targets == "") ||
 			strings.Contains(state.Targets, c.targetSegment) {
-			writer.WriteString(scanner.Text())
+			if _, err := writer.WriteString(scanner.Text()); err != nil {
+				return err
+			}
 		}
 	}
 	if err := scanner.Err(); err != nil {
