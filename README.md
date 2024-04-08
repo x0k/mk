@@ -156,4 +156,4 @@ go install github.com/x0k/mk@latest
 
 - The end of a segment is determined by indentation changes or the end of the file.
 - If segment is not defined for a line, the line will be added to each segment defined below.
-- Allowed file names `mkfilex`, `mkfile`, `Mkfilex`, `Mkfile`.
+- The filename must match the regular expression `^(M|m)kfile.*$`, all matching files are processed in reverse lexicographic order until the target segment is found.

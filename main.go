@@ -14,38 +14,61 @@ func makeWriter(file *os.File, args []string) (BufferedWriter, error) {
 	return bufio.NewWriter(os.Stdout), nil
 }
 
-func main() {
-	var file *os.File
-	var err error
-	for _, fileName := range MK_FILE_NAMES {
-		file, err = os.Open(fileName)
-		if err == nil {
-			defer file.Close()
-			break
-		}
+func processFile(l *log.Logger, fileName string, args []string, targetSegment string) bool {
+	file, err := os.Open(fileName)
+	if err != nil {
+		l.Printf("error during opening file %q: %q", fileName, err)
+		return false
+	}
+	defer file.Close()
+	writer, err := makeWriter(file, args)
+	if err != nil {
+		l.Printf("error during creating writer for %q: %q", fileName, err)
+		return false
+	}
+	err = NewTargetSegmentsCollector(targetSegment).Collect(NewSegmentsScanner(file), writer)
+	if err == ErrSegmentNotFound {
+		return false
 	}
 	if err != nil {
-		log.Fatal("Mkfile not found, allowed file names: ", strings.Join(MK_FILE_NAMES, ", "))
+		l.Printf("error during collecting segments of %q: %q", fileName, err)
+		return false
 	}
+	if err = writer.Flush(); err != nil {
+		l.Printf("error during printing the %q: %q", fileName, err)
+		return false
+	}
+	return true
+}
+
+func main() {
 	targetSegment := DEFAULT_TARGET_SEGMENT
 	args := []string{}
 	if len(os.Args) > 1 {
 		targetSegment = os.Args[1]
 		args = os.Args[2:]
 	}
-	writer, err := makeWriter(file, args)
+
+	dirEntities, err := os.ReadDir(".")
 	if err != nil {
-		log.Fatal("error during creating writer ", err)
+		log.Fatalf("error during reading dir: %q", err)
 	}
-	err = NewTargetSegmentsCollector(targetSegment).Collect(NewSegmentsScanner(file), writer)
-	if err == ErrSegmentNotFound {
-		log.Fatalf("segment %q not found", targetSegment)
+
+	fileFound := false
+	l := log.New(os.Stderr, "", 0)
+	for i := len(dirEntities) - 1; i >= 0; i-- {
+		entity := dirEntities[i]
+		if entity.IsDir() || !MK_FILE_REG_EXP.MatchString(entity.Name()) {
+			continue
+		}
+		fileFound = true
+		if processFile(l, entity.Name(), args, targetSegment) {
+			return
+		}
 	}
-	if err != nil {
-		log.Fatal("error during collecting segments ", err)
-	}
-	err = writer.Flush()
-	if err != nil {
-		log.Fatal("error during printing ", err)
+	if fileFound {
+		log.Fatalf("the segment %q is not found", targetSegment)
+	} else {
+		log.Fatalf("mkfile is not found, the filename should match: %q", MK_FILE_REG_EXP)
 	}
 }
