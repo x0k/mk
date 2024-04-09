@@ -9,7 +9,7 @@ import (
 type SegmentsScannerState struct {
 	Kind    SegmentsScannerStateKind
 	Segment string
-	Targets string
+	Targets []string
 }
 
 type segmentsScanner struct {
@@ -52,7 +52,7 @@ func (r *segmentsScanner) tryStartSegment(line string) bool {
 	r.setState(SegmentsScannerState{
 		Kind:    SEGMENT_STARTS,
 		Segment: matched[1],
-		Targets: matched[2],
+		Targets: strings.Fields(matched[2]),
 	})
 	return true
 }

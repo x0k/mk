@@ -21,6 +21,6 @@ const (
 )
 
 var MK_FILE_REG_EXP = regexp.MustCompile(`^(M|m)kfile.*$`)
-var SEGMENT_NAME_REG_EXP = regexp.MustCompile(`^([A-z][0-9A-z_-]*):\s*(.*?)\s*$`)
+var SEGMENT_NAME_REG_EXP = regexp.MustCompile(`^([A-z][0-9A-z\._-]*):(.*)$`)
 var SEGMENT_INDENT_REG_EXP = regexp.MustCompile(`^([ \t]+)`)
 var ErrSegmentNotFound = errors.New("segment not found")

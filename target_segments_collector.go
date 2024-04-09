@@ -2,6 +2,7 @@ package main
 
 import (
 	"io"
+	"slices"
 	"strings"
 )
 
@@ -20,6 +21,10 @@ type SegmentsScanner interface {
 	State() SegmentsScannerState
 }
 
+func (c *targetSegmentsCollector) startsWithTargetSegment(target string) bool {
+	return strings.HasPrefix(c.targetSegment, target)
+}
+
 func (c *targetSegmentsCollector) Collect(scanner SegmentsScanner, writer io.StringWriter) error {
 	for scanner.Scan() {
 		state := scanner.State()
@@ -28,8 +33,8 @@ func (c *targetSegmentsCollector) Collect(scanner SegmentsScanner, writer io.Str
 			return err
 		}
 		if state.Kind == SEGMENT_NOT_DEFINED ||
-			(c.targetSegment == DEFAULT_TARGET_SEGMENT && state.Targets == "") ||
-			strings.Contains(state.Targets, c.targetSegment) {
+			(c.targetSegment == DEFAULT_TARGET_SEGMENT && len(state.Targets) == 0) ||
+			slices.ContainsFunc(state.Targets, c.startsWithTargetSegment) {
 			if _, err := writer.WriteString(scanner.Text()); err != nil {
 				return err
 			}

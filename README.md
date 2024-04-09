@@ -2,6 +2,16 @@
 
 Text preprocessor for content segmentation.
 
+## Installation
+
+### Via `go install`
+
+With go 1.18 or higher:
+
+```shell
+go install github.com/x0k/mk@latest
+```
+
 ## Examples
 
 ### Basic
@@ -68,7 +78,7 @@ two
 
 Each segment can define its targets.
 
-If segment targets **contains** current target segment, then that segment will be included in the result.
+If the segment has a target that is a prefix of current target segment, it will be included in the result.
 
 `mkfilex` file
 
@@ -138,22 +148,13 @@ clean:
 build
 ```
 
-## Installation
+## Details
 
-### Via `go install`
-
-With go 1.18 or higher:
-
-```shell
-go install github.com/x0k/mk@latest
-```
-
-## Explanation
-
-- The segment defined by a label (and optional targets) that satisfies this regular expression `^([A-z][0-9A-z_-]*):\s*(.*?)\s*$` and by the presence of equal indentation `^([ \t]+)` on the subsequent lines.
+- The segment defined by a label (and optional targets) that satisfies this regular expression `^([A-z][0-9A-z\._-]*):(.*)$` and by the presence of equal indentation `^([ \t]+)` on the subsequent lines.
 
   By default segment is not defined.
 
+- Segment targets are a whitespace-separated list of segment prefixes that follow the `:` character.
 - The end of a segment is determined by indentation changes or the end of the file.
 - If segment is not defined for a line, the line will be added to each segment defined below.
 - The filename must match the regular expression `^(M|m)kfile.*$`, all matching files are processed in reverse lexicographic order until the target segment is found.
