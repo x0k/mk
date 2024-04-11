@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"slices"
 	"strings"
@@ -44,7 +45,7 @@ func (c *targetSegmentsCollector) Collect(scanner SegmentsScanner, writer io.Str
 		return err
 	}
 	if c.targetSegment != DEFAULT_TARGET_SEGMENT {
-		return ErrSegmentNotFound
+		return fmt.Errorf("%s: %w", c.targetSegment, ErrSegmentNotFound)
 	}
 	return nil
 }

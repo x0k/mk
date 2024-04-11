@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"strings"
 	"testing"
 )
@@ -74,7 +75,7 @@ foo
 			collector := NewTargetSegmentsCollector(tt.target)
 			scanner := NewSegmentsScanner(strings.NewReader(tt.content))
 			err := collector.Collect(scanner, &b)
-			if err != tt.expectedError {
+			if err != tt.expectedError && !errors.Is(err, tt.expectedError) {
 				t.Errorf("Expected error %q, got %q", tt.expectedError, err)
 			}
 			if tt.expectedError == nil && b.String() != tt.expected {

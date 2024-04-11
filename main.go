@@ -2,6 +2,8 @@ package main
 
 import (
 	"bufio"
+	"errors"
+	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -14,30 +16,24 @@ func makeWriter(file *os.File, args []string) (BufferedWriter, error) {
 	return bufio.NewWriter(os.Stdout), nil
 }
 
-func processFile(l *log.Logger, fileName string, args []string, targetSegment string) bool {
+func processFile(fileName string, args []string, targetSegment string) (bool, error) {
 	file, err := os.Open(fileName)
 	if err != nil {
-		l.Printf("%s: error during opening file: %s", fileName, err)
-		return false
+		return false, fmt.Errorf("error during opening file: %w", err)
 	}
 	defer file.Close()
 	writer, err := makeWriter(file, args)
 	if err != nil {
-		l.Printf("%s: error during creating writer: %s", fileName, err)
-		return false
+		return false, fmt.Errorf("error during creating writer: %w", err)
 	}
 	err = NewTargetSegmentsCollector(targetSegment).Collect(NewSegmentsScanner(file), writer)
-	if err == ErrSegmentNotFound {
-		return false
-	}
 	if err != nil {
-		l.Printf("%s: error during collecting segments: %s", fileName, err)
-		return false
+		return false, fmt.Errorf("error during collecting segments: %w", err)
 	}
 	if err = writer.Flush(); err != nil {
-		l.Printf("%s: error during flushing: %s", fileName, err)
+		return true, fmt.Errorf("error during flushing: %w", err)
 	}
-	return true
+	return true, nil
 }
 
 func main() {
@@ -54,15 +50,24 @@ func main() {
 	}
 
 	fileFound := false
-	l := log.New(os.Stderr, "", 0)
 	for i := len(dirEntities) - 1; i >= 0; i-- {
 		entity := dirEntities[i]
 		if entity.IsDir() || !MK_FILE_REG_EXP.MatchString(entity.Name()) {
 			continue
 		}
 		fileFound = true
-		if processFile(l, entity.Name(), args, targetSegment) {
+		isProcessed, err := processFile(entity.Name(), args, targetSegment)
+		if isProcessed {
+			if err != nil {
+				log.Fatalf("%s: %s", entity.Name(), err)
+			}
 			return
+		}
+		if errors.Is(err, ErrSegmentNotFound) {
+			continue
+		}
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s: %s\n", entity.Name(), err)
 		}
 	}
 	if fileFound {
