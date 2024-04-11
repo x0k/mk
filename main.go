@@ -17,13 +17,13 @@ func makeWriter(file *os.File, args []string) (BufferedWriter, error) {
 func processFile(l *log.Logger, fileName string, args []string, targetSegment string) bool {
 	file, err := os.Open(fileName)
 	if err != nil {
-		l.Printf("error during opening file %q: %q", fileName, err)
+		l.Printf("%s: error during opening file: %s", fileName, err)
 		return false
 	}
 	defer file.Close()
 	writer, err := makeWriter(file, args)
 	if err != nil {
-		l.Printf("error during creating writer for %q: %q", fileName, err)
+		l.Printf("%s: error during creating writer: %s", fileName, err)
 		return false
 	}
 	err = NewTargetSegmentsCollector(targetSegment).Collect(NewSegmentsScanner(file), writer)
@@ -31,12 +31,11 @@ func processFile(l *log.Logger, fileName string, args []string, targetSegment st
 		return false
 	}
 	if err != nil {
-		l.Printf("error during collecting segments of %q: %q", fileName, err)
+		l.Printf("%s: error during collecting segments: %s", fileName, err)
 		return false
 	}
 	if err = writer.Flush(); err != nil {
-		l.Printf("error during printing the %q: %q", fileName, err)
-		return false
+		l.Printf("%s: error during flushing: %s", fileName, err)
 	}
 	return true
 }
@@ -51,7 +50,7 @@ func main() {
 
 	dirEntities, err := os.ReadDir(".")
 	if err != nil {
-		log.Fatalf("error during reading dir: %q", err)
+		log.Fatalf("error during reading dir: %s", err)
 	}
 
 	fileFound := false
