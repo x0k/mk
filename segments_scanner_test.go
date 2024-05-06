@@ -22,13 +22,13 @@ xxx: !
 	excluded
 bar:
 	bar-content
-all:`,
+mk:`,
 			segments: []SegmentsScannerState{
 				{SEGMENT_CONTINUED, "foo", []string{"bar", "baz"}},
 				{SEGMENT_NOT_DEFINED, "", nil},
 				{SEGMENT_CONTINUED, "xxx", []string{"!"}},
 				{SEGMENT_CONTINUED, "bar", nil},
-				{SEGMENT_STARTS, "all", nil},
+				{SEGMENT_STARTS, "mk", nil},
 			},
 			texts: []string{
 				"foo-content\n",
@@ -46,14 +46,14 @@ foo: !
 	line-1
 	line-2
 
-all:
+mk:
 
 `,
 			segments: []SegmentsScannerState{
 				{SEGMENT_NOT_DEFINED, "", nil},
 				{SEGMENT_CONTINUED, "foo", []string{"!"}},
 				{SEGMENT_NOT_DEFINED, "", nil},
-				{SEGMENT_STARTS, "all", nil},
+				{SEGMENT_STARTS, "mk", nil},
 				{SEGMENT_NOT_DEFINED, "", nil},
 			},
 			texts: []string{
