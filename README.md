@@ -122,12 +122,12 @@ test:
 
 ### Default target
 
-By default target segment is `mk` and all segments are implicitly declare `mk` as their target.
+By default target segment is `default` and all segments are implicitly declare `default` as their target.
 So `$ mk` command will include all segments in the result.
 
 If you want to exclude some segment from `$ mk` result, then:
-- define segment with target (any non-empty string/strings not beginning with `mk`)
-- define segment after `mk` segment.
+- define segment with target (any non-empty string/strings not beginning with `default`)
+- define segment after `default` segment.
 
 `mkfilex` file
 
@@ -137,7 +137,7 @@ build:
   echo "build"
 test: build
   echo "test"
-mk:
+default:
 clean:
   echo "clean"
 ```

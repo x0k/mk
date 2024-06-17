@@ -10,7 +10,7 @@ type BufferedWriter interface {
 	Flush() error
 }
 
-const DEFAULT_TARGET_SEGMENT = "mk"
+const DEFAULT_TARGET_SEGMENT = "default"
 
 type SegmentsScannerStateKind int
 

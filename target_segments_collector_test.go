@@ -33,12 +33,12 @@ baz
 			name:   "Default target segment",
 			target: DEFAULT_TARGET_SEGMENT,
 			content: `#!/bin/bash -xe
-foo: mk baz
+foo: default baz
 	foo
 xxx: !
 	excluded
 bar
-mk:
+default:
 baz`,
 			expected: `#!/bin/bash -xe
 foo
