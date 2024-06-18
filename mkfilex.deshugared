@@ -1,0 +1,59 @@
+#!/usr/bin/bash -xe
+
+p/libs:
+    pushd packages/libs
+
+p/libs/build: p/libs
+    pnpm run build
+
+p/libs/dev: p/libs
+    pnpm run dev
+
+p/libs:
+    popd
+
+p/testing:
+    pushd packages/testing
+
+p/testing/deps: p/libs/build p/testing
+
+p/testing/build: p/testing/deps /p/testing
+    pnpm run build
+
+p/testing/dev: p/testing/deps p/testing
+    pnpm run dev
+
+p/testing:
+    popd
+
+c/design-patterns/factory:
+    pushd content/design-patterns/factory
+
+c/design-patterns/factory/check: p/libs/build /p/testing/build c/design-patterns/factory
+    pnpm run check
+
+c/design-patterns/factory/build: c/design-patterns/factory/check c/design-patterns/factory
+    pnpm run build
+
+c/design-patterns/factory:
+    popd
+
+app/ppp:
+    pushd apps/ppp
+
+app/ppp/deps: p/libs/build p/testing/build c/design-patterns/factory/build app/ppp
+
+app/ppp/dev: app/ppp/deps app/ppp
+    pnpm run dev
+
+app/ppp/check: app/ppp/deps app/ppp
+    pnpm run check
+    
+app/ppp/build: app/ppp/check app/ppp
+    pnpm run build
+
+app/ppp/preview: app/ppp/build app/ppp
+    pnpm run preview
+
+app/ppp:
+    popd

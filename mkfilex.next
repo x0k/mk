@@ -1,8 +1,6 @@
 
 #!/usr/bin/bash -xe
 
-default: app/ppp/preview
-
 p/libs/:
     pushd packages/libs
 
