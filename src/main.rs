@@ -36,7 +36,7 @@ fn resolve_target<'a>(nodes: &Vec<Node<'a>>, target: &'a str) -> HashSet<&'a str
         if visited.contains(&node) {
             continue;
         }
-        visited.insert(node.clone());
+        visited.insert(node);
         if let Some(deps) = graph.get(node) {
             stack.extend(deps.iter());
         }
@@ -109,6 +109,178 @@ mod tests {
         ];
         assert_eq!(resolve("bar", nodes), "foo content\nbar content");
     }
+}
+
+enum StateKind {
+    SegmentNotDefined,
+    SegmentStarts,
+    SegmentContinued,
+}
+
+struct ScannerState<'a> {
+    kind: StateKind,
+    segment: &'a str,
+    targets: Vec<&'a str>,
+}
+
+struct SegmentsScanner<'a> {
+    content: &'a str,
+    cursor: usize,
+    states: [ScannerState<'a>; 2],
+    current_state_index: usize,
+    segment_indentation: &'a str,
+    segment_builder: Vec<&'a str>,
+    done: bool,
+}
+
+impl<'a> SegmentsScanner<'a> {
+    fn new(content: &'a str) -> Self {
+        Self {
+            content,
+            cursor: 0,
+            states: [
+                ScannerState {
+                    kind: StateKind::SegmentNotDefined,
+                    segment: "",
+                    targets: Vec::new(),
+                },
+                ScannerState {
+                    kind: StateKind::SegmentNotDefined,
+                    segment: "",
+                    targets: Vec::new(),
+                },
+            ],
+            current_state_index: 0,
+            segment_indentation: "",
+            segment_builder: Vec::new(),
+            done: false,
+        }
+    }
+
+    fn next_state_index(&self) -> usize {
+        (self.current_state_index + 1) % 2
+    }
+
+    fn state(&self) -> &ScannerState {
+        &self.states[self.current_state_index]
+    }
+
+    fn mut_state(&'a mut self) -> &mut ScannerState {
+        &mut self.states[self.current_state_index]
+    }
+
+    fn prev_state(&self) -> &ScannerState {
+        &self.states[self.next_state_index()]
+    }
+
+    fn set_state(&mut self, state: ScannerState<'a>) {
+        self.current_state_index = self.next_state_index();
+        self.states[self.current_state_index] = state;
+    }
+
+    fn dependencies(&mut self) -> Vec<&'a str> {
+        let mut deps = Vec::new();
+        let content = &self.content[self.cursor..];
+        let mut start: i32 = -1;
+        for (i, c) in content.char_indices() {
+            if c == '\n' {
+                if start != -1 {
+                    deps.push(&content[start as usize..i]);
+                }
+                self.cursor += i + 1;
+                return deps;
+            }
+            if c.is_whitespace() {
+                // end of word
+                if start != -1 {
+                    deps.push(&content[start as usize..i]);
+                    start = -1;
+                }
+                continue;
+            }
+            if start == -1 {
+                start = i as i32;
+            }
+        }
+        if start != -1 {
+            deps.push(&content[start as usize..]);
+        }
+        self.cursor += content.len();
+        deps
+    }
+
+    fn start_segment(&mut self) -> bool {
+        let content = &self.content[self.cursor..];
+        for (i, c) in content.char_indices() {
+            if i == 0 && !c.is_alphabetic() {
+                return false;
+            }
+            if c == '\n' {
+                self.cursor += i + 1;
+                return false;
+            }
+            if c == ':' {
+                self.cursor += i + 1;
+                let deps = self.dependencies();
+                self.set_state(ScannerState {
+                    kind: StateKind::SegmentStarts,
+                    segment: &content[..i],
+                    targets: deps,
+                });
+                return true;
+            }
+            if !c.is_alphanumeric() || c != '/' || c != '_' || c != '-' || c != '.' {
+                return false;
+            }
+        }
+        false
+    }
+}
+
+#[cfg(test)]
+mod segments_scanner_tests {
+    use super::*;
+
+    #[test]
+    fn should_parse_simple_dependencies() {
+        let mut scanner = SegmentsScanner::new("bar");
+        let deps = scanner.dependencies();
+        assert_eq!(deps, vec!["bar"]);
+    }
+
+    #[test]
+    fn should_parse_multiple_dependencies() {
+        let mut scanner = SegmentsScanner::new("foo  bar    baz");
+        let deps = scanner.dependencies();
+        assert_eq!(deps, vec!["foo", "bar", "baz"]);
+    }
+
+    #[test]
+    fn should_parse_segments_till_newline() {
+        let mut scanner = SegmentsScanner::new("foo\tbar\nbaz");
+        let deps = scanner.dependencies();
+        assert_eq!(deps, vec!["foo", "bar"]);
+    }
+
+    // TODO: Unicode tests
+}
+
+impl<'a> Iterator for SegmentsScanner<'a> {
+    type Item = Node<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.state().kind {
+            StateKind::SegmentNotDefined => {}
+            StateKind::SegmentStarts => {}
+            StateKind::SegmentContinued => {}
+        }
+        None
+    }
+}
+
+fn make_nodes<'a>(lines: impl Iterator<Item = &'a str>) -> Vec<Node<'a>> {
+    let mut nodes = Vec::new();
+    nodes
 }
 
 fn main() {
