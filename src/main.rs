@@ -111,26 +111,76 @@ mod tests {
     }
 }
 
+#[derive(Debug, PartialEq, Eq)]
 enum StateKind {
+    Invalid,
     SegmentNotDefined,
     SegmentStarts,
     SegmentContinued,
 }
 
+#[derive(Debug)]
 struct ScannerState<'a> {
     kind: StateKind,
     segment: &'a str,
-    targets: Vec<&'a str>,
+    dependencies: Vec<&'a str>,
+    content_start_position: usize,
 }
 
+struct DependenciesCollector<'a> {
+    content: &'a str,
+    dependencies: Vec<&'a str>,
+    word_begin: isize,
+}
+
+impl<'a> DependenciesCollector<'a> {
+    fn new(content: &'a str) -> Self {
+        Self {
+            content,
+            word_begin: -1,
+            dependencies: Vec::new(),
+        }
+    }
+
+    fn start_word_if_not_started(&mut self, start: usize) {
+        if self.word_begin == -1 {
+            self.word_begin = start as isize;
+        }
+    }
+
+    fn collect_word_if_started(&mut self, end: usize) {
+        if self.word_begin != -1 {
+            self.dependencies
+                .push(&self.content[self.word_begin as usize..end]);
+            self.word_begin = -1;
+        }
+    }
+
+    fn collect(&mut self) -> usize {
+        for (i, c) in self.content.char_indices() {
+            if c == '\n' {
+                self.collect_word_if_started(i);
+                return i + 1;
+            }
+            if c.is_whitespace() {
+                self.collect_word_if_started(i);
+                continue;
+            }
+            self.start_word_if_not_started(i);
+        }
+        let l = self.content.len();
+        self.collect_word_if_started(l);
+        return l;
+    }
+}
+
+#[derive(Debug)]
 struct SegmentsScanner<'a> {
     content: &'a str,
     cursor: usize,
     states: [ScannerState<'a>; 2],
     current_state_index: usize,
     segment_indentation: &'a str,
-    segment_builder: Vec<&'a str>,
-    done: bool,
 }
 
 impl<'a> SegmentsScanner<'a> {
@@ -140,25 +190,29 @@ impl<'a> SegmentsScanner<'a> {
             cursor: 0,
             states: [
                 ScannerState {
-                    kind: StateKind::SegmentNotDefined,
+                    kind: StateKind::Invalid,
                     segment: "",
-                    targets: Vec::new(),
+                    dependencies: Vec::new(),
+                    content_start_position: 0,
                 },
                 ScannerState {
-                    kind: StateKind::SegmentNotDefined,
+                    kind: StateKind::Invalid,
                     segment: "",
-                    targets: Vec::new(),
+                    dependencies: Vec::new(),
+                    content_start_position: 0,
                 },
             ],
             current_state_index: 0,
             segment_indentation: "",
-            segment_builder: Vec::new(),
-            done: false,
         }
     }
 
     fn next_state_index(&self) -> usize {
         (self.current_state_index + 1) % 2
+    }
+
+    fn done(&self) -> bool {
+        self.cursor >= self.content.len()
     }
 
     fn state(&self) -> &ScannerState {
@@ -179,34 +233,9 @@ impl<'a> SegmentsScanner<'a> {
     }
 
     fn dependencies(&mut self) -> Vec<&'a str> {
-        let mut deps = Vec::new();
-        let content = &self.content[self.cursor..];
-        let mut start: i32 = -1;
-        for (i, c) in content.char_indices() {
-            if c == '\n' {
-                if start != -1 {
-                    deps.push(&content[start as usize..i]);
-                }
-                self.cursor += i + 1;
-                return deps;
-            }
-            if c.is_whitespace() {
-                // end of word
-                if start != -1 {
-                    deps.push(&content[start as usize..i]);
-                    start = -1;
-                }
-                continue;
-            }
-            if start == -1 {
-                start = i as i32;
-            }
-        }
-        if start != -1 {
-            deps.push(&content[start as usize..]);
-        }
-        self.cursor += content.len();
-        deps
+        let mut collector = DependenciesCollector::new(&self.content[self.cursor..]);
+        self.cursor += collector.collect();
+        collector.dependencies
     }
 
     fn start_segment(&mut self) -> bool {
@@ -221,18 +250,22 @@ impl<'a> SegmentsScanner<'a> {
             }
             if c == ':' {
                 self.cursor += i + 1;
-                let deps = self.dependencies();
+                let dependencies = self.dependencies();
+                let content_start_position = self.cursor;
                 self.set_state(ScannerState {
                     kind: StateKind::SegmentStarts,
                     segment: &content[..i],
-                    targets: deps,
+                    dependencies,
+                    content_start_position,
                 });
                 return true;
             }
-            if !c.is_alphanumeric() || c != '/' || c != '_' || c != '-' || c != '.' {
+            if !(c.is_alphanumeric() || c == '/' || c == '_' || c == '-' || c == '.') {
+                self.cursor += i + 1;
                 return false;
             }
         }
+        self.cursor += content.len();
         false
     }
 }
@@ -263,6 +296,25 @@ mod segments_scanner_tests {
     }
 
     // TODO: Unicode tests
+
+    #[test]
+    fn should_start_simple_segment() {
+        let mut scanner = SegmentsScanner::new("foo:");
+        assert_eq!(scanner.start_segment(), true);
+        assert_eq!(scanner.state().kind, StateKind::SegmentStarts);
+        assert_eq!(scanner.state().segment, "foo");
+        assert_eq!(scanner.state().dependencies.len(), 0);
+    }
+
+    #[test]
+    fn should_start_segment_with_dependencies() {
+        let mut scanner = SegmentsScanner::new("foo: bar\nbaz");
+        assert_eq!(scanner.start_segment(), true);
+        assert_eq!(scanner.state().kind, StateKind::SegmentStarts);
+        assert_eq!(scanner.state().segment, "foo");
+        let deps = &scanner.state().dependencies;
+        assert!(deps.len() == 1 && deps.contains(&"bar"));
+    }
 }
 
 impl<'a> Iterator for SegmentsScanner<'a> {
@@ -270,7 +322,8 @@ impl<'a> Iterator for SegmentsScanner<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.state().kind {
-            StateKind::SegmentNotDefined => {}
+            StateKind::Invalid => {}
+            StateKind::SegmentNotDefined => if self.start_segment() {},
             StateKind::SegmentStarts => {}
             StateKind::SegmentContinued => {}
         }
