@@ -1,8 +1,6 @@
 use super::node::Node;
-
-mod dependencies_collector;
-
-use dependencies_collector::DependenciesCollector;
+use super::chars::*;
+use super::dependencies_collector::DependenciesCollector;
 
 #[derive(Debug, PartialEq, Eq)]
 enum StateKind {
@@ -17,22 +15,6 @@ struct ScannerState<'a> {
     segment: &'a str,
     dependencies: Vec<&'a str>,
     content_start_position: usize,
-}
-
-fn is_new_line(&(_, c): &(usize, char)) -> bool {
-    c == '\n'
-}
-
-fn find_new_line(content: &str) -> Option<(usize, char)> {
-    content.char_indices().find(is_new_line)
-}
-
-fn is_not_whitespace(&(_, c): &(usize, char)) -> bool {
-    !c.is_whitespace()
-}
-
-fn find_not_whitespace(content: &str) -> Option<(usize, char)> {
-    content.char_indices().find(is_not_whitespace)
 }
 
 #[derive(Debug)]
@@ -90,9 +72,9 @@ impl<'a> SegmentsScanner<'a> {
     }
 
     fn dependencies(&mut self) -> Vec<&'a str> {
-        let (shift, dependencies) =
+        let (len, dependencies) =
             DependenciesCollector::new(&self.content[self.cursor..]).collect();
-        self.cursor += shift;
+        self.cursor += len + 1;
         dependencies
     }
 
@@ -118,7 +100,7 @@ impl<'a> SegmentsScanner<'a> {
                 });
                 return true;
             }
-            if !(c.is_alphanumeric() || c == '/' || c == '_' || c == '-' || c == '.') {
+            if !is_valid_segment_name_char(c) {
                 self.cursor += i + 1;
                 return false;
             }
@@ -143,7 +125,7 @@ impl<'a> SegmentsScanner<'a> {
         self.states[self.current_state_index].kind = StateKind::SegmentContinued;
         self.segment_indentation = &content[..i];
         if let Some(p) = find_new_line(&content[i..]) {
-            self.cursor += i + p.0 + 1;
+            self.cursor += i + p + 1;
         } else {
             self.cursor += content.len() + 1;
         }
@@ -157,7 +139,7 @@ impl<'a> SegmentsScanner<'a> {
                 break;
             }
             if let Some(p) = find_new_line(content) {
-                self.cursor += p.0 + 1;
+                self.cursor += p + 1;
             } else {
                 self.cursor += content.len() + 1;
             }

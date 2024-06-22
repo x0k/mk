@@ -29,7 +29,7 @@ impl<'a> DependenciesCollector<'a> {
         for (i, c) in self.content.char_indices() {
             if c == '\n' {
                 self.collect_if_started(i, &mut deps);
-                return (i + 1, deps);
+                return (i, deps);
             }
             if c.is_whitespace() {
                 self.collect_if_started(i, &mut deps);
@@ -39,6 +39,6 @@ impl<'a> DependenciesCollector<'a> {
         }
         let l = self.content.len();
         self.collect_if_started(l, &mut deps);
-        (l + 1, deps)
+        (l, deps)
     }
 }

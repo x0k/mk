@@ -43,13 +43,13 @@ foo:
 
 group/:
     pushd folder
-
+    
     bar: /foo
         bar segment content
-
+    
     baz: bar
         baz segment content
-
+    
     popd
 ```
 
