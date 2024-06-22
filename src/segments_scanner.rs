@@ -18,7 +18,7 @@ struct ScannerState<'a> {
 }
 
 #[derive(Debug)]
-struct SegmentsScanner<'a> {
+pub struct SegmentsScanner<'a> {
     content: &'a str,
     cursor: usize,
     states: [ScannerState<'a>; 2],
@@ -124,7 +124,7 @@ impl<'a> SegmentsScanner<'a> {
         }
         self.states[self.current_state_index].kind = StateKind::SegmentContinued;
         self.segment_indentation = &content[..i];
-        if let Some(p) = find_new_line(&content[i..]) {
+        if let Some(p) = find_new_line_index(&content[i..]) {
             self.cursor += i + p + 1;
         } else {
             self.cursor += content.len() + 1;
@@ -138,7 +138,7 @@ impl<'a> SegmentsScanner<'a> {
             if !content.starts_with(self.segment_indentation) {
                 break;
             }
-            if let Some(p) = find_new_line(content) {
+            if let Some(p) = find_new_line_index(content) {
                 self.cursor += p + 1;
             } else {
                 self.cursor += content.len() + 1;

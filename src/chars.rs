@@ -2,7 +2,7 @@ pub fn is_new_line(&(_, c): &(usize, char)) -> bool {
     c == '\n'
 }
 
-pub fn find_new_line(content: &str) -> Option<usize> {
+pub fn find_new_line_index(content: &str) -> Option<usize> {
     content.char_indices().find(is_new_line).and_then(|(i, _)| Some(i))
 }
 
@@ -25,6 +25,6 @@ mod tests {
     #[test]
     fn should_find_new_line() {
         
-        assert_eq!(find_new_line("\ncontent"), Some(0));
+        assert_eq!(find_new_line_index("\ncontent"), Some(0));
     }
 }

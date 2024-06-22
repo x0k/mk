@@ -3,7 +3,7 @@ mod node;
 mod graph;
 mod dependencies_collector;
 mod segments_scanner;
-mod groups_desugarer;
+mod groups;
 
 use node::Node;
 
