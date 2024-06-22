@@ -1,6 +1,6 @@
-use super::node::Node;
 use super::chars::*;
 use super::dependencies_collector::DependenciesCollector;
+use super::node::Node;
 
 #[derive(Debug, PartialEq, Eq)]
 enum StateKind {
@@ -82,6 +82,7 @@ impl<'a> SegmentsScanner<'a> {
         let content = &self.content[self.cursor..];
         for (i, c) in content.char_indices() {
             if i == 0 && !c.is_alphabetic() {
+                self.cursor += 1;
                 return false;
             }
             if c == '\n' {
@@ -399,5 +400,39 @@ mod iterator_tests {
                     Node::Content("common")
                 ]
         );
+    }
+
+    #[test]
+    fn should_emit_multiple_segments2() {
+        let scanner = SegmentsScanner::new(
+            "pushd folder
+
+bar: /foo
+    bar content
+    
+baz: bar
+    baz content
+    
+popd",
+        );
+        assert!(
+            collect(scanner)
+                == vec![
+                    Node::Content("pushd folder\n\n"),
+                    Node::Segment {
+                        name: "bar",
+                        content: "    bar content\n    \n",
+                        dependencies: vec!["/foo"],
+                        indentation: "    ",
+                    },
+                    Node::Segment {
+                        name: "baz",
+                        content: "    baz content\n    \n",
+                        dependencies: vec!["bar"],
+                        indentation: "    ",
+                    },
+                    Node::Content("popd")
+                ]
+        )
     }
 }

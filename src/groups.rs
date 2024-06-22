@@ -25,10 +25,7 @@ fn find_group_start(content: &str) -> Option<Position> {
     let mut prev_is_slash = false;
     for (i, c) in content.char_indices() {
         // this line is not a segment/group name
-        if i == 0 && !c.is_alphabetic() {
-            return skip_line_and_find_group_start(content, 1);
-        }
-        if is_valid_segment_name_char(c) {
+        if (i == 0 && c.is_alphabetic()) || is_valid_segment_name_char(c) {
             prev_is_slash = c == '/';
             continue;
         }
@@ -149,57 +146,69 @@ fn desugar_groups(content: &str, prefix: &str) -> String {
         .as_str(),
         group_name_with_prefix.as_str(),
     );
-    SegmentsScanner::new(group_content.as_str())
-        .map(|node| match node {
-            Node::Content(content) => DesugaredNode {
-                name: group_name.to_string(),
-                content: content
-                    .lines()
-                    .map(|l| format!("{group_indentation}{l}"))
-                    .collect::<Vec<_>>()
-                    .join("\n"),
-                dependencies: iter::once("".to_string())
-                    .chain(deps.iter().map(|d| d.to_string()))
-                    .collect(),
-            },
-            Node::Segment {
-                name,
-                content,
-                dependencies,
-                ..
-            } => DesugaredNode {
-                name: format!("{group_name}/{name}"),
-                content: content.to_string(),
-                dependencies: iter::once(group_name.to_string())
-                    .chain(dependencies.into_iter().map(|d| {
-                        if d.starts_with("/") {
-                            if prefix.is_empty() {
-                                d[1..].to_string()
-                            } else {
-                                d.to_string()
-                            }
+    let strings = iter::once(content[..start].to_string()).chain(
+        SegmentsScanner::new(group_content.as_str())
+            .map(|node| match node {
+                Node::Content(content) => {
+                    let lines = content.lines().map(|l| format!("{group_indentation}{l}"));
+                    DesugaredNode {
+                        name: group_name.to_string(),
+                        content: if content.ends_with("\n") {
+                            lines
+                                .chain(iter::once("".to_string()))
+                                .collect::<Vec<_>>()
+                                .join("\n")
                         } else {
-                            format!("{group_name}/{d}")
-                        }
-                    }))
-                    .collect(),
-            },
-        })
-        .map(
-            |DesugaredNode {
-                 name,
-                 content,
-                 dependencies,
-             }| format!("{}:{}\n{}", name, dependencies.join(" "), content),
-        )
-        // TODO: Is this newline needed?
-        // .chain(iter::once("\n".to_string()))
-        .chain(iter::once(desugar_groups(
-            &content[group_content_end..],
-            prefix,
-        )))
-        .collect::<Vec<_>>()
-        .join("")
+                            lines.collect::<Vec<_>>().join("\n")
+                        },
+                        dependencies: iter::once("".to_string())
+                            .chain(deps.iter().map(|d| d.to_string()))
+                            .collect(),
+                    }
+                }
+                Node::Segment {
+                    name,
+                    content,
+                    dependencies,
+                    ..
+                } => DesugaredNode {
+                    name: format!("{group_name}/{name}"),
+                    content: content.to_string(),
+                    dependencies: iter::once("".to_string())
+                        .chain(iter::once(group_name.to_string()))
+                        .chain(dependencies.into_iter().map(|d| {
+                            if d.starts_with("/") {
+                                if prefix.is_empty() {
+                                    d[1..].to_string()
+                                } else {
+                                    d.to_string()
+                                }
+                            } else {
+                                format!("{group_name}/{d}")
+                            }
+                        }))
+                        .collect(),
+                },
+            })
+            .map(
+                |DesugaredNode {
+                     name,
+                     content,
+                     dependencies,
+                 }| format!("{}:{}\n{}", name, dependencies.join(" "), content),
+            ),
+    );
+    if group_content_end < content.len() {
+        strings
+            .chain(iter::once(desugar_groups(
+                &content[group_content_end..],
+                prefix,
+            )))
+            .collect::<Vec<_>>()
+            .join("")
+    } else {
+        strings.collect::<Vec<_>>().join("")
+    }
 }
 
 pub fn desugar(content: &str) -> String {
@@ -233,6 +242,13 @@ mod tests {
                 length: 6
             })
         );
+        assert_eq!(
+            find_group_start("\ngroup/:"),
+            Some(Position {
+                start: 1,
+                length: 6
+            })
+        );
     }
 
     #[test]
@@ -250,5 +266,36 @@ mod tests {
     #[test]
     fn should_desugar_simple_group() {
         assert_eq!(desugar("group/:\n\tcontent"), "group:\n\tcontent")
+    }
+
+    #[test]
+    fn should_desugar_group() {
+        assert_eq!(
+            desugar(
+                "
+group/:
+    pushd folder
+    
+    bar: /foo
+        bar content
+        
+    baz: bar
+        baz content
+        
+    popd"
+            ),
+            "
+group:
+    pushd folder
+    
+group/bar: group foo
+    bar content
+    
+group/baz: group group/bar
+    baz content
+    
+group:
+    popd"
+        )
     }
 }
