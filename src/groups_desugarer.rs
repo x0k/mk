@@ -1,23 +1,19 @@
 use super::chars::*;
 use super::dependencies_collector::DependenciesCollector;
 
-fn slip_line_and_find_group_start(
-    content: &str,
-    level: usize,
-    skip: usize,
-) -> Option<(usize, usize)> {
+fn slip_line_and_find_group_start(content: &str, skip: usize) -> Option<(usize, usize)> {
     find_new_line(&content[skip..]).and_then(|j| {
         let k = skip + j + 1;
-        find_group_start(&content[k..], level).and_then(|(s, l)| Some((k + s, l)))
+        find_group_start(&content[k..]).and_then(|(s, l)| Some((k + s, l)))
     })
 }
 
-fn find_group_start(content: &str, level: usize) -> Option<(usize, usize)> {
+fn find_group_start(content: &str) -> Option<(usize, usize)> {
     let mut prev_is_slash = false;
-    for (i, c) in content.char_indices().skip_while(|&(i, _)| i < level) {
+    for (i, c) in content.char_indices() {
         // this line is not a segment/group name
         if i == 0 && !c.is_alphabetic() {
-            return slip_line_and_find_group_start(content, level, 1);
+            return slip_line_and_find_group_start(content, 1);
         }
         if is_valid_segment_name_char(c) {
             prev_is_slash = c == '/';
@@ -25,7 +21,7 @@ fn find_group_start(content: &str, level: usize) -> Option<(usize, usize)> {
         }
         // group name should contain at least one char and end with slash
         if c != ':' || i < 2 || !prev_is_slash {
-            return slip_line_and_find_group_start(content, level, i);
+            return slip_line_and_find_group_start(content, i);
         }
         return Some((0, i));
     }
@@ -83,7 +79,7 @@ fn build_group_header(
     .join("");
 }
 
-fn remove_root_indentation(content: &str, level: usize) -> String {
+fn remove_parent_indentation(content: &str, level: usize) -> String {
     if level == 0 {
         return content.to_string();
     }
@@ -95,9 +91,9 @@ fn remove_root_indentation(content: &str, level: usize) -> String {
 }
 
 fn desugar_group(content: &str, level: usize) -> String {
-    let group_start = find_group_start(content, level);
+    let group_start = find_group_start(content);
     if group_start.is_none() {
-        return remove_root_indentation(content, level);
+        return remove_parent_indentation(content, level);
     }
     let (start, length) = group_start.unwrap();
     let deps_start = start + length + 1;
@@ -131,20 +127,19 @@ mod tests {
 
     #[test]
     fn should_find_group_start() {
-        assert_eq!(find_group_start("group/:", 0), Some((0, 6)));
-        assert_eq!(find_group_start("skip\ngroup/:", 0), Some((5, 6)));
+        assert_eq!(find_group_start("group/:"), Some((0, 6)));
+        assert_eq!(find_group_start("skip\ngroup/:"), Some((5, 6)));
         assert_eq!(
-            find_group_start("skip: this\n\tcontent\ngroup/:", 0),
+            find_group_start("skip: this\n\tcontent\ngroup/:"),
             Some((20, 6))
         );
-        assert_eq!(find_group_start("  group/:", 2), Some((0, 8)));
     }
 
     #[test]
     fn should_not_find_group_start() {
-        assert_eq!(find_group_start("segment:", 0), None);
-        assert_eq!(find_group_start("not/group:", 0), None);
-        assert_eq!(find_group_start("invalid/\n", 0), None);
+        assert_eq!(find_group_start("segment:"), None);
+        assert_eq!(find_group_start("not/group:"), None);
+        assert_eq!(find_group_start("invalid/\n"), None);
     }
 
     #[test]
