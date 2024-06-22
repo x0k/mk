@@ -1,5 +1,9 @@
 use super::node::Node;
 
+mod dependencies_collector;
+
+use dependencies_collector::DependenciesCollector;
+
 #[derive(Debug, PartialEq, Eq)]
 enum StateKind {
     SegmentNotDefined,
@@ -13,53 +17,6 @@ struct ScannerState<'a> {
     segment: &'a str,
     dependencies: Vec<&'a str>,
     content_start_position: usize,
-}
-
-struct DependenciesCollector<'a> {
-    content: &'a str,
-    dependencies: Vec<&'a str>,
-    word_begin: isize,
-}
-
-impl<'a> DependenciesCollector<'a> {
-    fn new(content: &'a str) -> Self {
-        Self {
-            content,
-            word_begin: -1,
-            dependencies: Vec::new(),
-        }
-    }
-
-    fn start_word_if_not_started(&mut self, start: usize) {
-        if self.word_begin == -1 {
-            self.word_begin = start as isize;
-        }
-    }
-
-    fn collect_word_if_started(&mut self, end: usize) {
-        if self.word_begin != -1 {
-            self.dependencies
-                .push(&self.content[self.word_begin as usize..end]);
-            self.word_begin = -1;
-        }
-    }
-
-    fn collect(&mut self) -> usize {
-        for (i, c) in self.content.char_indices() {
-            if c == '\n' {
-                self.collect_word_if_started(i);
-                return i + 1;
-            }
-            if c.is_whitespace() {
-                self.collect_word_if_started(i);
-                continue;
-            }
-            self.start_word_if_not_started(i);
-        }
-        let l = self.content.len();
-        self.collect_word_if_started(l);
-        return l + 1;
-    }
 }
 
 fn is_new_line(&(_, c): &(usize, char)) -> bool {
@@ -88,7 +45,7 @@ struct SegmentsScanner<'a> {
 }
 
 impl<'a> SegmentsScanner<'a> {
-    fn new(content: &'a str) -> Self {
+    pub fn new(content: &'a str) -> Self {
         Self {
             content,
             cursor: 0,
@@ -133,9 +90,10 @@ impl<'a> SegmentsScanner<'a> {
     }
 
     fn dependencies(&mut self) -> Vec<&'a str> {
-        let mut collector = DependenciesCollector::new(&self.content[self.cursor..]);
-        self.cursor += collector.collect();
-        collector.dependencies
+        let (shift, dependencies) =
+            DependenciesCollector::new(&self.content[self.cursor..]).collect();
+        self.cursor += shift;
+        dependencies
     }
 
     fn start_segment(&mut self) -> bool {
@@ -192,15 +150,6 @@ impl<'a> SegmentsScanner<'a> {
         true
     }
 
-    fn finish_segment(&mut self, content_start_position: usize) {
-        self.set_state(ScannerState {
-            kind: StateKind::SegmentNotDefined,
-            segment: "",
-            dependencies: Vec::new(),
-            content_start_position,
-        });
-    }
-
     fn complete_segment(&mut self) {
         while !self.done() {
             let content = &self.content[self.cursor..];
@@ -213,6 +162,15 @@ impl<'a> SegmentsScanner<'a> {
                 self.cursor += content.len() + 1;
             }
         }
+    }
+
+    fn finish_segment(&mut self, content_start_position: usize) {
+        self.set_state(ScannerState {
+            kind: StateKind::SegmentNotDefined,
+            segment: "",
+            dependencies: Vec::new(),
+            content_start_position,
+        });
     }
 }
 
