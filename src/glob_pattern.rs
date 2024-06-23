@@ -1,6 +1,5 @@
 use std::collections::HashSet;
 use std::iter;
-use std::vec::IntoIter;
 
 use glob::Pattern;
 

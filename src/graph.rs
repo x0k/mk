@@ -38,9 +38,12 @@ fn resolve_target<'a>(
     visited
 }
 
-fn resolve(target: &str, nodes: &[Node]) -> String {
+pub fn resolve(nodes: &[Node], target: &str) -> Option<String> {
     let graph = make_graph(nodes);
     let segments = resolve_target(&graph, target);
+    if segments.is_empty() {
+        return None;
+    }
     let mut result = Vec::new();
     for node in nodes {
         match node {
@@ -64,7 +67,7 @@ fn resolve(target: &str, nodes: &[Node]) -> String {
             }
         }
     }
-    result.join("\n")
+    Some(result.join("\n"))
 }
 
 #[cfg(test)]
@@ -74,7 +77,7 @@ mod tests {
     #[test]
     fn should_resolve_common_content() {
         let nodes = &[Node::Content("common content")];
-        assert_eq!(resolve("", nodes), "common content");
+        assert_eq!(resolve(nodes, ""), Some("common content".to_string()));
     }
 
     #[test]
@@ -85,7 +88,7 @@ mod tests {
             dependencies: Vec::new(),
             indentation: "",
         }];
-        assert_eq!(resolve("foo", nodes), "foo content");
+        assert_eq!(resolve(nodes, "foo"), Some("foo content".to_string()));
     }
 
     #[test]
@@ -99,7 +102,10 @@ mod tests {
                 indentation: "",
             },
         ];
-        assert_eq!(resolve("foo", nodes), "common content\nfoo content");
+        assert_eq!(
+            resolve(nodes, "foo"),
+            Some("common content\nfoo content".to_string())
+        );
     }
 
     #[test]
@@ -118,7 +124,10 @@ mod tests {
                 indentation: "",
             },
         ];
-        assert_eq!(resolve("bar", nodes), "foo content\nbar content");
+        assert_eq!(
+            resolve(nodes, "bar"),
+            Some("foo content\nbar content".to_string())
+        );
     }
 
     #[test]
@@ -137,6 +146,9 @@ mod tests {
                 indentation: "    ",
             },
         ];
-        assert_eq!(resolve("bar", nodes), "foo content\nbar content");
+        assert_eq!(
+            resolve(nodes, "bar"),
+            Some("foo content\nbar content".to_string())
+        );
     }
 }
