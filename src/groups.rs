@@ -146,7 +146,7 @@ fn desugar_groups(content: &str, prefix: &str) -> String {
         .as_str(),
         group_name_with_prefix.as_str(),
     );
-    let strings = iter::once(content[..start].to_string()).chain(
+    let segments = iter::once(content[..start].to_string()).chain(
         SegmentsScanner::new(group_content.as_str())
             .map(|node| match node {
                 Node::Content(content) => {
@@ -199,7 +199,7 @@ fn desugar_groups(content: &str, prefix: &str) -> String {
             ),
     );
     if group_content_end < content.len() {
-        strings
+        segments
             .chain(iter::once(desugar_groups(
                 &content[group_content_end..],
                 prefix,
@@ -207,7 +207,7 @@ fn desugar_groups(content: &str, prefix: &str) -> String {
             .collect::<Vec<_>>()
             .join("")
     } else {
-        strings.collect::<Vec<_>>().join("")
+        segments.collect::<Vec<_>>().join("")
     }
 }
 

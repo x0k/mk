@@ -4,6 +4,7 @@ mod graph;
 mod dependencies_collector;
 mod segments_scanner;
 mod groups;
+mod glob_pattern;
 
 use node::Node;
 

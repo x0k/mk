@@ -36,6 +36,9 @@ Configuration is done via file suffixes.
 
 ### Groups
 
+- `/` at the end of the segment name defines a group.
+- `/` at the beginning of the dependency name indicates that name should be left as is.
+
 ```bash
 
 foo:
@@ -73,6 +76,8 @@ group:
 ```
 
 ### Glob pattern in dependencies list
+
+- [glob implementation](https://docs.rs/glob/latest/glob/struct.Pattern.html).
 
 ```bash
 l/lib1/build:

@@ -265,9 +265,14 @@ impl<'a> Iterator for SegmentsScanner<'a> {
                 if self.state().kind == StateKind::SegmentNotDefined {
                     return Some(Node::Content(&self.content[initial_cursor..]));
                 }
+                let content_start = self.state().content_start_position;
                 return Some(Node::Segment {
                     name: self.state().segment,
-                    content: &self.content[self.state().content_start_position..],
+                    content: if content_start < self.content.len() {
+                        &self.content[self.state().content_start_position..]
+                    } else {
+                        ""
+                    },
                     dependencies: self.state().dependencies.clone(),
                     indentation: self.segment_indentation,
                 });
