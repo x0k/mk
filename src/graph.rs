@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use super::node::Node;
 
-fn make_graph<'a>(nodes: &Vec<Node<'a>>) -> HashMap<&'a str, HashSet<&'a str>> {
+fn make_graph<'a>(nodes: &[Node<'a>]) -> HashMap<&'a str, HashSet<&'a str>> {
     let mut graph: HashMap<&'a str, HashSet<&'a str>> = HashMap::new();
     for node in nodes {
         match node {
@@ -17,8 +17,10 @@ fn make_graph<'a>(nodes: &Vec<Node<'a>>) -> HashMap<&'a str, HashSet<&'a str>> {
     graph
 }
 
-fn resolve_target<'a>(nodes: &Vec<Node<'a>>, target: &'a str) -> HashSet<&'a str> {
-    let graph = make_graph(nodes);
+fn resolve_target<'a>(
+    graph: &HashMap<&'a str, HashSet<&'a str>>,
+    target: &'a str,
+) -> HashSet<&'a str> {
     let mut visited = HashSet::new();
 
     let mut stack = Vec::new();
@@ -36,15 +38,28 @@ fn resolve_target<'a>(nodes: &Vec<Node<'a>>, target: &'a str) -> HashSet<&'a str
     visited
 }
 
-fn resolve(target: &str, nodes: Vec<Node>) -> String {
-    let segments = resolve_target(&nodes, &target);
+fn resolve(target: &str, nodes: &[Node]) -> String {
+    let graph = make_graph(nodes);
+    let segments = resolve_target(&graph, target);
     let mut result = Vec::new();
     for node in nodes {
         match node {
-            Node::Content(content) => result.push(content),
-            Node::Segment { name, content, .. } => {
-                if segments.contains(&name) {
-                    result.push(content)
+            Node::Content(content) => result.push(*content),
+            Node::Segment {
+                name,
+                content,
+                indentation,
+                ..
+            } => {
+                if !segments.contains(name) {
+                    continue;
+                }
+                let l = indentation.len();
+                for line in content.lines() {
+                    result.push(&line[l..]);
+                }
+                if content.ends_with("\n") {
+                    result.push("");
                 }
             }
         }
@@ -58,13 +73,13 @@ mod tests {
 
     #[test]
     fn should_resolve_common_content() {
-        let nodes = vec![Node::Content("common content")];
+        let nodes = &[Node::Content("common content")];
         assert_eq!(resolve("", nodes), "common content");
     }
 
     #[test]
     fn should_resolve_segment_content() {
-        let nodes = vec![Node::Segment {
+        let nodes = &[Node::Segment {
             name: "foo",
             content: "foo content",
             dependencies: Vec::new(),
@@ -75,7 +90,7 @@ mod tests {
 
     #[test]
     fn should_resolve_all_content() {
-        let nodes = vec![
+        let nodes = &[
             Node::Content("common content"),
             Node::Segment {
                 name: "foo",
@@ -89,7 +104,7 @@ mod tests {
 
     #[test]
     fn should_resolve_dependency() {
-        let nodes = vec![
+        let nodes = &[
             Node::Segment {
                 name: "foo",
                 content: "foo content",
@@ -101,6 +116,25 @@ mod tests {
                 content: "bar content",
                 dependencies: vec!["foo"],
                 indentation: "",
+            },
+        ];
+        assert_eq!(resolve("bar", nodes), "foo content\nbar content");
+    }
+
+    #[test]
+    fn should_resolve_with_indentation() {
+        let nodes = &[
+            Node::Segment {
+                name: "foo",
+                content: "\tfoo content",
+                dependencies: Vec::new(),
+                indentation: "\t",
+            },
+            Node::Segment {
+                name: "bar",
+                content: "    bar content",
+                dependencies: vec!["foo"],
+                indentation: "    ",
             },
         ];
         assert_eq!(resolve("bar", nodes), "foo content\nbar content");

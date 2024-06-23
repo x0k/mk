@@ -341,10 +341,8 @@ mod iterator_tests {
     #[test]
     fn should_emit_content_and_segments() {
         let scanner = SegmentsScanner::new("content\nfoo:\n\tfoo 1\n\tfoo 2\ncommon");
-        let collected = collect(scanner);
-        println!("{:?}", collected);
         assert!(
-            collected
+            collect(scanner)
                 == vec![
                     Node::Content("content\n"),
                     Node::Segment {
