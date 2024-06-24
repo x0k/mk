@@ -2,7 +2,13 @@
 
 Simple text preprocessor for content segmentation.
 
-## Basic syntax
+## Installation
+
+```shell
+cargo install --git https://github.com/x0k/mk.git
+```
+
+## Syntax
 
 ```bash
 common content
@@ -15,7 +21,7 @@ bar: foo
     bar segment content
 ```
 
-`$ mk bar` command output:
+`$ mk bar` output:
 
 ```bash
 common content
@@ -28,7 +34,11 @@ bar segment content
 
 ## Configuration
 
-Configuration is done via file suffixes.
+- File names must begin with `Mkfile` or `mkfile`.
+- Files are read in lexicographic order.
+- The contents of the files are concatenated.
+
+Some features configures via file suffixes until first `.` character or end of file name.
 
 - With `x` suffix the result of preprocessing will be saved as tmp file and executed.
 
@@ -39,7 +49,7 @@ Configuration is done via file suffixes.
 - `/` at the end of the segment name defines a group.
 - `/` at the beginning of the dependency name indicates that name should be left as is.
 
-```bash
+```makefile
 
 foo:
     foo content
@@ -58,7 +68,7 @@ group/:
 
 Desugared:
 
-```bash
+```makefile
 foo:
     foo content
 
@@ -79,7 +89,7 @@ group:
 
 - [glob implementation](https://docs.rs/glob/latest/glob/struct.Pattern.html).
 
-```bash
+```makefile
 l/lib1/build:
     build lib1
 
@@ -92,7 +102,7 @@ app: l/*/build
 
 Desugared:
 
-```bash
+```makefile
 l/lib1/build:
     build lib1
 
