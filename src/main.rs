@@ -25,6 +25,10 @@ fn main() {
         .unwrap()
         .filter_map(Result::ok)
         .collect();
+    if filenames.is_empty() {
+        eprintln!("No mkfiles found");
+        return;
+    }
     filenames.sort();
     for path in filenames {
         config.assign(&path);
