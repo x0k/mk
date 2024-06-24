@@ -21,15 +21,15 @@ fn main() {
     let args = env::args().collect::<Vec<_>>();
     let mut config = Config::new();
     let mut files = Vec::new();
-    for entry in glob("[Mm]kfile*").unwrap() {
-        match entry {
-            Ok(path) => {
-                config.assign(&path);
-                match fs::read_to_string(path) {
-                    Ok(content) => files.push(content),
-                    Err(e) => eprintln!("{:?}", e),
-                }
-            }
+    let mut filenames: Vec<_> = glob("[Mm]kfile*")
+        .unwrap()
+        .filter_map(Result::ok)
+        .collect();
+    filenames.sort();
+    for path in filenames {
+        config.assign(&path);
+        match fs::read_to_string(path) {
+            Ok(content) => files.push(content),
             Err(e) => eprintln!("{:?}", e),
         }
     }
