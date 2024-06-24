@@ -11,6 +11,7 @@ mod graph;
 mod groups;
 mod node;
 mod segments_scanner;
+mod printer;
 
 use config::Config;
 use segments_scanner::SegmentsScanner;

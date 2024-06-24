@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 pub struct Config {
-    executable: bool,
+    pub executable: bool,
 }
 
 impl Config {
