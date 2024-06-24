@@ -17,11 +17,6 @@ use segments_scanner::SegmentsScanner;
 
 fn main() {
     let args = env::args().collect::<Vec<_>>();
-    if args.len() < 2 {
-        eprintln!("Usage: {} <target>", args[0]);
-        return;
-    }
-    let target = args[1].as_str();
     let mut config = Config::new();
     let mut files = Vec::new();
     for entry in glob("[Mm]kfile*").unwrap() {
@@ -38,9 +33,9 @@ fn main() {
     }
     let content = glob_pattern::desugar(groups::desugar(files.join("\n").as_str()).as_str());
     let nodes: Vec<_> = SegmentsScanner::new(content.as_str()).collect();
-    match graph::resolve(&nodes, target) {
-        // TODO: Printer
-        Some(content) => println!("{}", content),
-        None => eprintln!("Target {} not found", target),
+    let targets = args[1..].iter().map(|s| s.as_str()).collect::<Vec<_>>();
+    match graph::resolve(&nodes, targets.as_slice()) {
+        Ok(content) => print!("{}", content),
+        Err(target) => eprintln!("target not found: {}", target),       
     }
 }

@@ -17,14 +17,14 @@ fn make_graph<'a>(nodes: &[Node<'a>]) -> HashMap<&'a str, HashSet<&'a str>> {
     graph
 }
 
-fn resolve_target<'a>(
+fn resolve_targets<'a>(
     graph: &HashMap<&'a str, HashSet<&'a str>>,
-    target: &'a str,
+    targets: &[&'a str],
 ) -> HashSet<&'a str> {
     let mut visited = HashSet::new();
 
     let mut stack = Vec::new();
-    stack.push(target);
+    stack.extend_from_slice(targets);
 
     while let Some(node) = stack.pop() {
         if visited.contains(&node) {
@@ -38,12 +38,14 @@ fn resolve_target<'a>(
     visited
 }
 
-pub fn resolve(nodes: &[Node], target: &str) -> Option<String> {
+pub fn resolve<'a>(nodes: &[Node<'a>], targets: &[&'a str]) -> Result<String, &'a str> {
     let graph = make_graph(nodes);
-    let segments = resolve_target(&graph, target);
-    if segments.is_empty() {
-        return None;
+    for target in targets {
+        if !graph.contains_key(target) {
+            return Err(*target);
+        }
     }
+    let segments = resolve_targets(&graph, targets);
     let mut result = Vec::new();
     for node in nodes {
         match node {
@@ -58,6 +60,10 @@ pub fn resolve(nodes: &[Node], target: &str) -> Option<String> {
                     continue;
                 }
                 let l = indentation.len();
+                if l == 0 {
+                    result.push(content);
+                    continue;
+                }
                 for line in content.lines() {
                     result.push(&line[l..]);
                 }
@@ -67,7 +73,7 @@ pub fn resolve(nodes: &[Node], target: &str) -> Option<String> {
             }
         }
     }
-    Some(result.join("\n"))
+    Ok(result.join("\n"))
 }
 
 #[cfg(test)]
@@ -77,7 +83,7 @@ mod tests {
     #[test]
     fn should_resolve_common_content() {
         let nodes = &[Node::Content("common content")];
-        assert_eq!(resolve(nodes, ""), Some("common content".to_string()));
+        assert_eq!(resolve(nodes, &[]), Ok("common content".to_string()));
     }
 
     #[test]
@@ -88,7 +94,7 @@ mod tests {
             dependencies: Vec::new(),
             indentation: "",
         }];
-        assert_eq!(resolve(nodes, "foo"), Some("foo content".to_string()));
+        assert_eq!(resolve(nodes, &["foo"]), Ok("foo content".to_string()));
     }
 
     #[test]
@@ -103,8 +109,8 @@ mod tests {
             },
         ];
         assert_eq!(
-            resolve(nodes, "foo"),
-            Some("common content\nfoo content".to_string())
+            resolve(nodes, &["foo"]),
+            Ok("common content\nfoo content".to_string())
         );
     }
 
@@ -125,8 +131,8 @@ mod tests {
             },
         ];
         assert_eq!(
-            resolve(nodes, "bar"),
-            Some("foo content\nbar content".to_string())
+            resolve(nodes, &["bar"]),
+            Ok("foo content\nbar content".to_string())
         );
     }
 
@@ -147,8 +153,22 @@ mod tests {
             },
         ];
         assert_eq!(
-            resolve(nodes, "bar"),
-            Some("foo content\nbar content".to_string())
+            resolve(nodes, &["bar"]),
+            Ok("foo content\nbar content".to_string())
         );
+    }
+
+    #[test]
+    fn should_not_resolve() {
+        let nodes = &[
+            Node::Content("common content"),
+            Node::Segment {
+                name: "foo",
+                content: "foo content",
+                dependencies: Vec::new(),
+                indentation: "",
+            },
+        ];
+        assert_eq!(resolve(nodes, &["foo", "bar"]), Err("bar"));
     }
 }
