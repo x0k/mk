@@ -10,10 +10,11 @@ mod glob_pattern;
 mod graph;
 mod groups;
 mod node;
-mod segments_scanner;
 mod printer;
+mod segments_scanner;
 
 use config::Config;
+use printer::Printer;
 use segments_scanner::SegmentsScanner;
 
 fn main() {
@@ -36,7 +37,13 @@ fn main() {
     let nodes: Vec<_> = SegmentsScanner::new(content.as_str()).collect();
     let targets = args[1..].iter().map(|s| s.as_str()).collect::<Vec<_>>();
     match graph::resolve(&nodes, targets.as_slice()) {
-        Ok(content) => print!("{}", content),
-        Err(target) => eprintln!("target not found: {}", target),       
+        Ok(content) => {
+            let printer = Printer::new(&config);
+            match printer.print(&content) {
+                Ok(_) => {}
+                Err(e) => eprintln!("{:?}", e),
+            }
+        }
+        Err(target) => eprintln!("target not found: {}", target),
     }
 }

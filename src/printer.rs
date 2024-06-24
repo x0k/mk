@@ -1,20 +1,18 @@
 use std::{
-    error::Error,
-    io::{self, Write},
-    os::{self, unix::fs::PermissionsExt}, process::Command,
+    env, error::Error, io::Write, os::unix::fs::PermissionsExt, path::Path, process::Command,
 };
 
-use tempfile;
+use rand::{distributions::Alphanumeric, Rng};
 
 use super::config::Config;
 
-enum Printer {
+pub enum Printer {
     Stdout,
     Executor,
 }
 
 impl Printer {
-    fn new(config: &Config) -> Self {
+    pub fn new(config: &Config) -> Self {
         if config.executable {
             Self::Executor
         } else {
@@ -22,23 +20,29 @@ impl Printer {
         }
     }
 
-    fn print(&self, content: &str) -> Result<(), Box<dyn Error>> {
+    pub fn print(&self, content: &str) -> Result<(), Box<dyn Error>> {
         match self {
             Self::Stdout => {
                 println!("{}", content);
                 Ok(())
             }
             Self::Executor => {
-                let mut file = tempfile::tempfile()?;
-                file.write_all(content.as_bytes())?;
-                file.flush()?;
-                file.metadata()?.permissions().set_mode(0o755);
-                Command::new(file)
-                    .stdin(io::stdin())
-                    .stdout(io::stdout())
-                    .stderr(io::stderr())
-                    .args(&["/C", "echo hello"]).output()?;
-
+                let prefix: String = rand::thread_rng()
+                    .sample_iter(&Alphanumeric)
+                    .take(5)
+                    .map(char::from)
+                    .collect();
+                let path = Path::join(&env::temp_dir(), format!("mk-{}.tmp", prefix));
+                let file_path = path.to_str().unwrap().to_string();
+                {
+                    let mut file = std::fs::File::create(&path)?;
+                    let mut permissions = file.metadata()?.permissions();
+                    permissions.set_mode(0o755);
+                    file.set_permissions(permissions)?;
+                    file.write_all(content.as_bytes())?;
+                    file.flush()?;
+                }
+                Command::new(file_path).spawn()?.wait()?;
                 Ok(())
             }
         }
