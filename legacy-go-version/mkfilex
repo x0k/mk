@@ -1,0 +1,13 @@
+#!/usr/bin/bash -xe
+
+TARGET="mk"
+
+build:
+	go build -o ./bin/${TARGET}
+
+clean:
+	go clean
+	rm -f ./bin/${TARGET}
+
+test:
+	go test ./

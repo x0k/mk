@@ -1,13 +1,7 @@
 #!/usr/bin/bash -xe
 
-TARGET="mk"
+t:
+    cargo test
 
-build:
-	go build -o ./bin/${TARGET}
-
-clean:
-	go clean
-	rm -f ./bin/${TARGET}
-
-test:
-	go test ./
+b:
+    cargo build
