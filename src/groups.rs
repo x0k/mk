@@ -200,6 +200,7 @@ fn desugar_groups(content: &str, prefix: &str) -> String {
     );
     if group_content_end < content.len() {
         segments
+            .chain(iter::once("\n".to_string()))
             .chain(iter::once(desugar_groups(
                 &content[group_content_end..],
                 prefix,
@@ -297,5 +298,31 @@ group/baz: group group/bar
 group:
     popd"
         )
+    }
+
+    #[test]
+    fn should_preserve_newlines_between_group_segments() {
+        assert_eq!(
+            desugar(
+                "# Artifacts
+a/:
+  go/:
+    pushd packages/testing-go/go
+    build:
+      GOOS=js GOARCH=wasm go build -o ../public/compiler.wasm cmd/compiler/main.go
+    popd
+  build: go/build
+"
+            ),
+            "# Artifacts
+a/go: a
+  pushd packages/testing-go/go
+a/go/build: a a/go
+  GOOS=js GOARCH=wasm go build -o ../public/compiler.wasm cmd/compiler/main.go
+a/go: a
+  popd
+a/build: a a/go/build
+"
+        );
     }
 }
