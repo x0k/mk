@@ -43,6 +43,7 @@ impl Printer {
                     file.flush()?;
                 }
                 Command::new(file_path).spawn()?.wait()?;
+                std::fs::remove_file(path)?;
                 Ok(())
             }
         }
