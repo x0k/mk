@@ -325,4 +325,13 @@ a/build: a a/go/build
 "
         );
     }
+
+    #[test]
+    fn should_not_panic_while_desugar_file() {
+        let content = include_str!("testdata/mkfile.test");
+        let result = std::panic::catch_unwind(|| {
+            desugar(content);
+        });
+        assert!(result.is_ok(), "should not panic");
+    }
 }

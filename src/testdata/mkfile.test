@@ -1,0 +1,75 @@
+#!/usr/bin/bash -xe
+
+d:
+  pnpm run dev
+
+c:
+  pnpm run check
+
+b:
+  pnpm run build
+
+p:
+  pnpm run preview
+
+go/:
+  pushd packages/testing-go
+  p:
+    bun run probe/index.ts
+  b:
+    pnpm run build
+  popd
+
+rust/:
+  pushd packages/testing-rust
+  p:
+    bun run probe/index.ts
+  b:
+    pnpm run build
+  popd
+
+# Artifacts
+a/:
+  build: */build
+  go/:
+    pushd packages/testing-go/go
+    build:
+      GOOS=js GOARCH=wasm go build -o ../public/compiler.wasm cmd/compiler/main.go
+    probe:
+      go run cmd/probe/main.go
+    tidy:
+      go mod tidy
+    popd
+  rust/:
+    build: wasm/*
+    pushd packages/testing-rust/rust
+    wasm/:
+      sdk:
+        if [ ! -f wasi-sdk-20.0-linux.tar.gz ]; then
+          wget https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-20/wasi-sdk-20.0-linux.tar.gz
+          tar -xzvf wasi-sdk-20.0-linux.tar.gz
+        fi
+      build:
+        ./x.py install
+      copy:
+        cp dist/bin/miri.wasm ../public
+        cp -r dist/lib/rustlib/x86_64-unknown-linux-gnu/lib/* ../public/lib/
+    popd
+  gleam/:
+    build: compiler/* stdlib/*
+    pushd packages/testing-gleam
+    compiler/:
+      pushd gleam/compiler-wasm
+      build:
+        CC=clang CXX=clang++ wasm-pack build --release --target web
+      copy:
+        cp -r pkg/* ../../vendor/compiler/
+      popd
+    stdlib/:
+      pushd gleamstd
+      build:
+        gleam run
+      copy:
+        cp -r dist/* ../vendor/stdlib/
+      popd
+    popd

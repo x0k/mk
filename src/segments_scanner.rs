@@ -250,7 +250,11 @@ impl<'a> Iterator for SegmentsScanner<'a> {
                 }
                 StateKind::SegmentContinued => {
                     self.complete_segment();
-                    let segment_end = self.cursor;
+                    let segment_end = if &self.cursor > &self.content.len() {
+                        self.content.len()
+                    } else {
+                        self.cursor
+                    };
                     let segment = Node::Segment {
                         name: self.state().segment,
                         dependencies: self.state().dependencies.clone(),
