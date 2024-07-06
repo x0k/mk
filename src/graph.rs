@@ -46,10 +46,10 @@ pub fn resolve<'a>(nodes: &[Node<'a>], targets: &[&'a str]) -> Result<String, &'
         }
     }
     let segments = resolve_targets(&graph, targets);
-    let mut result = Vec::new();
+    let mut blocks = Vec::new();
     for node in nodes {
         match node {
-            Node::Content(content) => result.push(*content),
+            Node::Content(content) => blocks.push(*content),
             Node::Segment {
                 name,
                 content,
@@ -61,19 +61,20 @@ pub fn resolve<'a>(nodes: &[Node<'a>], targets: &[&'a str]) -> Result<String, &'
                 }
                 let l = indentation.len();
                 if l == 0 {
-                    result.push(content);
+                    blocks.push(content);
                     continue;
                 }
                 for line in content.lines() {
-                    result.push(&line[l..]);
+                    blocks.push(&line[l..]);
+                    blocks.push("\n");
                 }
-                if content.ends_with("\n") {
-                    result.push("");
+                if !content.ends_with("\n") {
+                    blocks.pop();
                 }
             }
         }
     }
-    Ok(result.join("\n"))
+    Ok(blocks.join(""))
 }
 
 #[cfg(test)]
@@ -100,7 +101,7 @@ mod tests {
     #[test]
     fn should_resolve_all_content() {
         let nodes = &[
-            Node::Content("common content"),
+            Node::Content("common content\n"),
             Node::Segment {
                 name: "foo",
                 content: "foo content",
@@ -119,7 +120,7 @@ mod tests {
         let nodes = &[
             Node::Segment {
                 name: "foo",
-                content: "foo content",
+                content: "foo content\n",
                 dependencies: Vec::new(),
                 indentation: "",
             },
@@ -141,7 +142,7 @@ mod tests {
         let nodes = &[
             Node::Segment {
                 name: "foo",
-                content: "\tfoo content",
+                content: "\tfoo content\n",
                 dependencies: Vec::new(),
                 indentation: "\t",
             },
