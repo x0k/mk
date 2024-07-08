@@ -22,23 +22,23 @@ use segments_scanner::SegmentsScanner;
 
 const META: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/Cargo.toml"));
 
-fn parse_meta<'a>(meta: &'a toml::Table) -> Option<(&'a str, &'a str, &'a str)> {
+fn parse_meta() -> Option<(&'static str, &'static str, &'static str)> {
+    let meta: &'static toml::Table = Box::leak(Box::new(toml::from_str(META).ok()?));
     let package = meta.get("package")?.as_table()?;
-    let name = package.get("name")?.as_str()?;
-    let description = package.get("description")?.as_str()?;
-    let version = package.get("version")?.as_str()?;
-    return Some((name, description, version));
+    return Some((
+        package.get("name")?.as_str()?,
+        package.get("description")?.as_str()?,
+        package.get("version")?.as_str()?,
+    ));
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let meta: &'static toml::Table = Box::leak(Box::new(toml::from_str(META)?));
-    let (name, description, version) = parse_meta(meta).unwrap();
-    let matches = Command::new(name).version(version).about(description).arg(
-        Arg::new("target")
-            .help("target segment(s)")
-            .required(true)
-            .num_args(0..),
-    ).get_matches();
+    let (name, description, version) = parse_meta().unwrap();
+    let matches = Command::new(name)
+        .version(version)
+        .about(description)
+        .arg(Arg::new("target").help("target segment(s)").num_args(0..))
+        .get_matches();
     let mut config = Config::new();
     let mut files = Vec::new();
     let mut filenames: Vec<_> = glob("[Mm]kfile*").unwrap().filter_map(Result::ok).collect();
@@ -55,7 +55,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     let content = syntax::desugar(files.join("\n").as_str());
     let nodes: Vec<_> = SegmentsScanner::new(content.as_str()).collect();
-    let targets: Vec<String> = matches.get_many::<String>("target").unwrap().collect();
+    let targets: Vec<_> = matches
+        .get_many::<String>("target")
+        .unwrap_or_default()
+        .map(|s| s.as_str())
+        .collect();
     match graph::resolve(&nodes, targets.as_slice()) {
         Ok(content) => {
             let printer = Printer::new(&config);
