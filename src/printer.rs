@@ -23,7 +23,7 @@ impl Printer {
     pub fn print(&self, content: &str) -> Result<(), Box<dyn Error>> {
         match self {
             Self::Stdout => {
-                println!("{}", content);
+                print!("{}", content);
                 Ok(())
             }
             Self::Executor => {
