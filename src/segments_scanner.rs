@@ -112,7 +112,7 @@ impl<'a> SegmentsScanner<'a> {
 
     fn continue_segment(&mut self) -> bool {
         let content = &self.content[self.cursor..];
-        let p = find_not_whitespace(content);
+        let p = find_not_indentation(content);
         if p.is_none() {
             self.cursor += content.len() + 1;
             return false;
@@ -441,5 +441,37 @@ popd",
                     Node::Content("popd")
                 ]
         )
+    }
+
+    #[test]
+    fn should_emit_multiple_segments3() {
+        let scanner = SegmentsScanner::new(
+            "artifacts: dotnet
+
+libs:
+  pushd packages/libs
+",
+        );
+        let nodes = collect(scanner);
+        dbg!(&nodes);
+        assert!(
+            nodes
+                == vec![
+                    Node::Segment {
+                        name: "artifacts",
+                        content: "",
+                        indentation: "",
+                        dependencies: vec!["dotnet",],
+                    },
+                    Node::Content("\n",),
+                    Node::Segment {
+                        name: "libs",
+                        content: "  pushd packages/libs\n",
+                        indentation: "  ",
+                        dependencies: vec![],
+                    },
+                    Node::Content("",),
+                ]
+        );
     }
 }

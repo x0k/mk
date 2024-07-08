@@ -12,6 +12,7 @@ mod groups;
 mod node;
 mod printer;
 mod segments_scanner;
+mod syntax;
 
 use config::Config;
 use printer::Printer;
@@ -21,10 +22,7 @@ fn main() {
     let args = env::args().collect::<Vec<_>>();
     let mut config = Config::new();
     let mut files = Vec::new();
-    let mut filenames: Vec<_> = glob("[Mm]kfile*")
-        .unwrap()
-        .filter_map(Result::ok)
-        .collect();
+    let mut filenames: Vec<_> = glob("[Mm]kfile*").unwrap().filter_map(Result::ok).collect();
     if filenames.is_empty() {
         eprintln!("No mkfiles found");
         return;
@@ -37,7 +35,7 @@ fn main() {
             Err(e) => eprintln!("{:?}", e),
         }
     }
-    let content = glob_pattern::desugar(groups::desugar(files.join("\n").as_str()).as_str());
+    let content = syntax::desugar(files.join("\n").as_str());
     let nodes: Vec<_> = SegmentsScanner::new(content.as_str()).collect();
     let targets = args[1..].iter().map(|s| s.as_str()).collect::<Vec<_>>();
     match graph::resolve(&nodes, targets.as_slice()) {

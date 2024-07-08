@@ -42,7 +42,7 @@ fn find_group_start(content: &str) -> Option<Position> {
 }
 
 fn detect_group_indentation(content: &str) -> Option<&str> {
-    let (i, _) = find_not_whitespace(content)?;
+    let (i, _) = find_not_indentation(content)?;
     Some(&content[..i])
 }
 
@@ -328,7 +328,7 @@ a/build: a a/go/build
 
     #[test]
     fn should_not_panic_while_desugar_file() {
-        let content = include_str!("testdata/mkfile.test");
+        let content = include_str!("testdata/out-of-bounds.input");
         let result = std::panic::catch_unwind(|| {
             desugar(content);
         });

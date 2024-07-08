@@ -13,12 +13,12 @@ pub fn find_new_line_index(content: &str) -> Option<usize> {
         .and_then(|(i, _)| Some(i))
 }
 
-pub fn is_not_whitespace(&(_, c): &(usize, char)) -> bool {
-    !c.is_whitespace()
+pub fn is_not_indentation(&(_, c): &(usize, char)) -> bool {
+    !c.is_whitespace() || c == '\n'
 }
 
-pub fn find_not_whitespace(content: &str) -> Option<(usize, char)> {
-    content.char_indices().find(is_not_whitespace)
+pub fn find_not_indentation(content: &str) -> Option<(usize, char)> {
+    content.char_indices().find(is_not_indentation)
 }
 
 static GLOB_PATTERN_SYMBOLS: Lazy<HashSet<char>> = Lazy::new(|| {
@@ -48,7 +48,9 @@ static ALLOWED_SYMBOLS: Lazy<HashSet<char>> = Lazy::new(|| {
 });
 
 pub fn is_valid_segment_name_char(char: char) -> bool {
-    char.is_alphanumeric() || ALLOWED_SYMBOLS.contains(&char) || GLOB_PATTERN_SYMBOLS.contains(&char)
+    char.is_alphanumeric()
+        || ALLOWED_SYMBOLS.contains(&char)
+        || GLOB_PATTERN_SYMBOLS.contains(&char)
 }
 
 #[cfg(test)]
