@@ -1,26 +1,34 @@
 use std::path::PathBuf;
 
+use super::printer::Printer;
+
 pub struct Config {
-    pub executable: bool,
+    pub printer: Printer,
 }
 
 impl Config {
     pub fn new() -> Config {
-        Config { executable: false }
+        Config { printer: Printer::Stdout }
     }
 
-    pub fn assign(&mut self, path: &PathBuf) {
+    pub fn parse(&mut self, path: &PathBuf) {
         let str = path.to_str();
         if str.is_none() {
             return;
         }
-        let mut str = &str.unwrap()[6..];
+        let mut str = str.unwrap();
+        if !(str.starts_with("Mkfile") || str.starts_with("mkfile")) {
+            return;
+        }
+        str = &str[6..];
         if let Some(p) = str.find(".") {
             str = &str[..p];
         }
         if str.is_empty() {
             return;
         }
-        self.executable = self.executable || str.contains('x');
+        if str.contains('x') {
+            self.printer = Printer::Executor;
+        };
     }
 }

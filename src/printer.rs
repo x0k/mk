@@ -2,24 +2,16 @@ use std::{
     env, error::Error, io::Write, os::unix::fs::PermissionsExt, path::Path, process::Command,
 };
 
+use clap::ValueEnum;
 use rand::{distributions::Alphanumeric, Rng};
 
-use super::config::Config;
-
+#[derive(Clone, ValueEnum)]
 pub enum Printer {
     Stdout,
     Executor,
 }
 
 impl Printer {
-    pub fn new(config: &Config) -> Self {
-        if config.executable {
-            Self::Executor
-        } else {
-            Self::Stdout
-        }
-    }
-
     pub fn print(&self, content: &str) -> Result<(), Box<dyn Error>> {
         match self {
             Self::Stdout => {
