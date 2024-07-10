@@ -4,43 +4,64 @@ Simple text preprocessor for content segmentation.
 
 ## Installation
 
+### With `cargo`
+
 ```shell
 cargo install --git https://github.com/x0k/mk.git
 ```
 
+### With `nix profile`
+
+```shell
+nix profile install github:x0k/mk
+```
+
 ## Syntax
+
+`mkfile` content:
 
 ```bash
 common content
 
 foo:
-    foo segment content
+    foo segment start
 
 # segment with a dependency
 bar: foo
     bar segment content
+
+# multiple segment definition
+foo:
+    foo segment end
 ```
 
-`$ mk bar` output:
+`$ mk bar | cat` output:
 
 ```bash
 common content
 
-foo segment content
+foo segment start
 
 # segment with a dependency
 bar segment content
+
+# multiple segment definition
+foo segment end
 ```
 
-## Configuration
+That's all.
 
-- File names must begin with `Mkfile` or `mkfile`.
+## Input
+
+- Content can be specified via std in or input files.
+- By default, input file names should begin with `Mkfile` or `mkfile`.
 - Files are read in lexicographic order.
 - The contents of the files are concatenated.
 
-Some features configures via file suffixes until first `.` character or end of file name.
+## Output
 
-- With `x` suffix the result of preprocessing will be saved as tmp file and executed.
+- By default, a temporary file will be created and executed.
+- If you pipe the program to something then the std out will be used.
 
 ## Syntax sugar
 

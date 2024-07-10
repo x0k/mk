@@ -1,12 +1,13 @@
 use std::env;
 use std::fs;
+use std::io::Read;
 
+use atty::Stream;
 use clap::{value_parser, Arg, Command};
 use glob::glob;
 use toml;
 
 mod chars;
-mod config;
 mod dependencies_collector;
 mod glob_pattern;
 mod graph;
@@ -16,7 +17,6 @@ mod printer;
 mod segments_scanner;
 mod syntax;
 
-use config::Config;
 use printer::Printer;
 use segments_scanner::SegmentsScanner;
 
@@ -32,10 +32,7 @@ fn parse_meta() -> Option<(&'static str, &'static str, &'static str)> {
     ));
 }
 
-fn read_content_from_files(
-    config: &mut Config,
-    pattern: &str,
-) -> Result<String, Box<dyn std::error::Error>> {
+fn read_content_from_files(pattern: &str) -> Result<String, Box<dyn std::error::Error>> {
     let mut files = Vec::new();
     let mut filenames: Vec<_> = glob(pattern).unwrap().filter_map(Result::ok).collect();
     if filenames.is_empty() {
@@ -43,7 +40,6 @@ fn read_content_from_files(
     }
     filenames.sort();
     for path in filenames {
-        config.parse(&path);
         match fs::read_to_string(path) {
             Ok(content) => files.push(content),
             Err(e) => return Err(e.into()),
@@ -72,20 +68,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .value_parser(value_parser!(Printer)),
         )
         .get_matches();
-    let mut config = Config::new();
-    let content =
-        read_content_from_files(&mut config, matches.get_one::<String>("input").unwrap())?;
-    if let Some(printer) = matches.get_one::<Printer>("printer") {
-        config.printer = printer.clone();
-    }
+    let content = if atty::is(Stream::Stdin) {
+        read_content_from_files(matches.get_one::<String>("input").unwrap())?
+    } else {
+        let mut input = String::new();
+        std::io::stdin().read_to_string(&mut input)?;
+        input
+    };
     let nodes: Vec<_> = SegmentsScanner::new(content.as_str()).collect();
     let targets: Vec<_> = matches
         .get_many::<String>("target")
         .unwrap_or_default()
         .map(|s| s.as_str())
         .collect();
+    let printer: Printer = if let Some(printer) = matches.get_one::<Printer>("printer") {
+        printer.clone()
+    } else {
+        if atty::is(Stream::Stdout) {
+            Printer::Executor
+        } else {
+            Printer::Stdout
+        }
+    };
     match graph::resolve(&nodes, targets.as_slice()) {
-        Ok(content) => config.printer.print(&content),
+        Ok(content) => printer.print(&content),
         Err(target) => Err(format!("target not found: {}", target).into()),
     }
 }
