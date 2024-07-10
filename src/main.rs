@@ -59,10 +59,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .about(description)
         .arg(Arg::new("target").help("target segment(s)").num_args(0..))
         .arg(
-            Arg::new("config")
-                .help("config files glob pattern")
-                .short('C')
-                .long("config")
+            Arg::new("input")
+                .help("input files glob pattern")
+                .short('I')
+                .long("input")
                 .default_value("[Mm]kfile*"),
         )
         .arg(
@@ -74,7 +74,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .get_matches();
     let mut config = Config::new();
     let content =
-        read_content_from_files(&mut config, matches.get_one::<String>("config").unwrap())?;
+        read_content_from_files(&mut config, matches.get_one::<String>("input").unwrap())?;
     if let Some(printer) = matches.get_one::<Printer>("printer") {
         config.printer = printer.clone();
     }
