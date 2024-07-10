@@ -67,6 +67,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .long("printer")
                 .value_parser(value_parser!(Printer)),
         )
+        .arg(
+            Arg::new("arguments")
+                .help("Arguments passed to the executable script")
+                .num_args(1..)
+                .last(true),
+        )
         .get_matches();
     let content = if atty::is(Stream::Stdin) {
         read_content_from_files(matches.get_one::<String>("input").unwrap())?
@@ -81,17 +87,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap_or_default()
         .map(|s| s.as_str())
         .collect();
-    let printer: Printer = if let Some(printer) = matches.get_one::<Printer>("printer") {
-        printer.clone()
-    } else {
-        if atty::is(Stream::Stdout) {
-            Printer::Executor
-        } else {
-            Printer::Stdout
-        }
-    };
     match graph::resolve(&nodes, targets.as_slice()) {
-        Ok(content) => printer.print(&content),
+        Ok(content) => {
+            let printer: Printer = if let Some(printer) = matches.get_one::<Printer>("printer") {
+                printer.clone()
+            } else {
+                if atty::is(Stream::Stdout) {
+                    Printer::Executor
+                } else {
+                    Printer::Stdout
+                }
+            };
+            let args: Vec<&String> = matches.get_many("arguments").unwrap_or_default().collect();
+            printer.print(&content, args.as_slice())
+        }
         Err(target) => Err(format!("target not found: {}", target).into()),
     }
 }

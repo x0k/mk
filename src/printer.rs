@@ -1,5 +1,5 @@
 use std::{
-    env, error::Error, io::Write, os::unix::fs::PermissionsExt, path::Path, process::Command,
+    env, error::Error, ffi::OsStr, io::Write, os::unix::fs::PermissionsExt, path::Path, process::Command
 };
 
 use clap::ValueEnum;
@@ -12,7 +12,11 @@ pub enum Printer {
 }
 
 impl Printer {
-    pub fn print(&self, content: &str) -> Result<(), Box<dyn Error>> {
+    pub fn print<I, S>(&self, content: &str, args: I) -> Result<(), Box<dyn Error>>
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<OsStr>,
+    {
         match self {
             Self::Stdout => {
                 print!("{}", content);
@@ -34,7 +38,7 @@ impl Printer {
                     file.write_all(content.as_bytes())?;
                     file.flush()?;
                 }
-                Command::new(file_path).spawn()?.wait()?;
+                Command::new(file_path).args(args).spawn()?.wait()?;
                 std::fs::remove_file(path)?;
                 Ok(())
             }
