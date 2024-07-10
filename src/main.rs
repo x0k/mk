@@ -45,7 +45,7 @@ fn read_content_from_files(pattern: &str) -> Result<String, Box<dyn std::error::
             Err(e) => return Err(e.into()),
         }
     }
-    Ok(syntax::desugar(files.join("\n").as_str()))
+    Ok(files.join("\n"))
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -81,6 +81,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         std::io::stdin().read_to_string(&mut input)?;
         input
     };
+    let content = syntax::desugar(content.as_str());
     let nodes: Vec<_> = SegmentsScanner::new(content.as_str()).collect();
     let targets: Vec<_> = matches
         .get_many::<String>("target")
