@@ -1,8 +1,7 @@
 use std::env;
 use std::fs;
-use std::io::Read;
+use std::io::{IsTerminal, Read};
 
-use atty::Stream;
 use clap::{value_parser, Arg, Command};
 use glob::glob;
 use toml;
@@ -74,12 +73,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .last(true),
         )
         .get_matches();
-    let content = if atty::is(Stream::Stdin) {
-        read_content_from_files(matches.get_one::<String>("input").unwrap())?
-    } else {
-        let mut input = String::new();
-        std::io::stdin().read_to_string(&mut input)?;
-        input
+    let content = {
+        let mut stdin = std::io::stdin();
+        if stdin.is_terminal() {
+            read_content_from_files(matches.get_one::<String>("input").unwrap())?
+        } else {
+            let mut input = String::new();
+            stdin.read_to_string(&mut input)?;
+            input
+        }
     };
     let content = syntax::desugar(content.as_str());
     let nodes: Vec<_> = SegmentsScanner::new(content.as_str()).collect();
@@ -93,7 +95,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let printer: Printer = if let Some(printer) = matches.get_one::<Printer>("printer") {
                 printer.clone()
             } else {
-                if atty::is(Stream::Stdout) {
+                if std::io::stdout().is_terminal() {
                     Printer::Executor
                 } else {
                     Printer::Stdout
