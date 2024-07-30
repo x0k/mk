@@ -267,7 +267,9 @@ impl<'a> Iterator for SegmentsScanner<'a> {
             }
             if self.done() {
                 if self.state().kind == StateKind::SegmentNotDefined {
-                    return Some(Node::Content(&self.content[initial_cursor..]));
+                    return Some(Node::Content(
+                        &self.content[self.state().content_start_position..],
+                    ));
                 }
                 let content_start = self.state().content_start_position;
                 return Some(Node::Segment {
@@ -453,7 +455,6 @@ libs:
 ",
         );
         let nodes = collect(scanner);
-        dbg!(&nodes);
         assert!(
             nodes
                 == vec![
@@ -471,6 +472,48 @@ libs:
                         dependencies: vec![],
                     },
                     Node::Content("",),
+                ]
+        );
+    }
+
+    #[test]
+    fn should_emit_multiline_end_content() {
+        let scanner = SegmentsScanner::new(
+            "pushd probe
+some line
+i:
+  bun install
+mkdir -p public/doppio
+rsync -rL ../doppio/build/release/ public/doppio --delete
+t:
+  another segment
+bun run dev
+popd",
+        );
+        let nodes = collect(scanner);
+        assert!(
+            nodes
+                == vec![
+                    Node::Content("pushd probe\nsome line\n",),
+                    Node::Segment {
+                        name: "i",
+                        content: "  bun install\n",
+                        indentation: "  ",
+                        dependencies: vec![],
+                    },
+                    Node::Content(
+                        "mkdir -p public/doppio
+rsync -rL ../doppio/build/release/ public/doppio --delete\n"
+                    ),
+                    Node::Segment {
+                        name: "t",
+                        content: "  another segment\n",
+                        indentation: "  ",
+                        dependencies: vec![],
+                    },
+                    Node::Content(
+                        "bun run dev\npopd",
+                    ),
                 ]
         );
     }
