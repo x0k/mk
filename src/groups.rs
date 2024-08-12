@@ -113,17 +113,17 @@ fn desugar_groups(content: &str, prefix: &str) -> String {
     }
     let Position { start, length } = group_start.unwrap();
     let deps_start = start + length + 1;
-    let (len, deps) = DependenciesCollector::new(&content[deps_start..]).collect();
+    let (len, group_dependencies) = DependenciesCollector::new(&content[deps_start..]).collect();
     let group_content_start = deps_start + len + 1;
     // end of file (no group content)
     if group_content_start >= content.len() {
-        return build_group_header(prefix, content, length, deps);
+        return build_group_header(prefix, content, length, group_dependencies);
     }
     let group_indentation = detect_group_indentation(&content[group_content_start..]);
     // empty group
     if group_indentation.is_none() {
         return vec![
-            build_group_header(prefix, content, length, deps).as_str(),
+            build_group_header(prefix, content, length, group_dependencies).as_str(),
             "\n",
             desugar_groups(&content[group_content_start..], prefix).as_str(),
         ]
@@ -146,6 +146,16 @@ fn desugar_groups(content: &str, prefix: &str) -> String {
         .as_str(),
         group_name_with_prefix.as_str(),
     );
+    let handle_prefix = |s: &str| {
+        if !s.starts_with("/") {
+            return None;
+        }
+        Some(if prefix.is_empty() {
+            s[1..].to_string()
+        } else {
+            s.to_string()
+        })
+    };
     let segments = iter::once(content[..start].to_string()).chain(
         SegmentsScanner::new(group_content.as_str())
             .map(|node| match node {
@@ -162,7 +172,7 @@ fn desugar_groups(content: &str, prefix: &str) -> String {
                             lines.collect::<Vec<_>>().join("\n")
                         },
                         dependencies: iter::once("".to_string())
-                            .chain(deps.iter().map(|d| d.to_string()))
+                            .chain(group_dependencies.iter().map(|d| d.to_string()))
                             .collect(),
                     }
                 }
@@ -176,16 +186,13 @@ fn desugar_groups(content: &str, prefix: &str) -> String {
                     content: content.to_string(),
                     dependencies: iter::once("".to_string())
                         .chain(iter::once(group_name.to_string()))
-                        .chain(dependencies.into_iter().map(|d| {
-                            if d.starts_with("/") {
-                                if prefix.is_empty() {
-                                    d[1..].to_string()
-                                } else {
-                                    d.to_string()
-                                }
-                            } else {
-                                format!("{group_name}/{d}")
-                            }
+                        .chain(
+                            group_dependencies
+                                .iter()
+                                .map(|dep| handle_prefix(dep).unwrap_or_else(|| dep.to_string())),
+                        )
+                        .chain(dependencies.into_iter().map(|dep| {
+                            handle_prefix(dep).unwrap_or_else(|| format!("{group_name}/{dep}"))
                         }))
                         .collect(),
                 },
@@ -333,5 +340,18 @@ a/build: a a/go/build
             desugar(content);
         });
         assert!(result.is_ok(), "should not panic");
+    }
+
+    #[test]
+    fn should_properly_inherit_group_dependencies() {
+        assert_eq!(
+            desugar(
+                "t/: /root vars
+  plan:
+    tofu plan ${vars}"
+            ),
+            "t/plan: t root vars
+  tofu plan ${vars}"
+        );
     }
 }
