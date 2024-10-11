@@ -5,10 +5,11 @@ use std::{
 use clap::ValueEnum;
 use rand::{distributions::Alphanumeric, Rng};
 
-#[derive(Clone, ValueEnum)]
+#[derive(Clone, ValueEnum, PartialEq)]
 pub enum Printer {
     Stdout,
     Executor,
+    DesugarDebug,
 }
 
 impl Printer {
@@ -20,6 +21,10 @@ impl Printer {
         match self {
             Self::Stdout => {
                 print!("{}", content);
+                Ok(())
+            }
+            Self::DesugarDebug => {
+                println!("{}", content);
                 Ok(())
             }
             Self::Executor => {

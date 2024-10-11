@@ -1,6 +1,7 @@
 use std::env;
 use std::fs;
 use std::io::{IsTerminal, Read};
+use std::iter;
 
 use clap::{value_parser, Arg, Command};
 use glob::glob;
@@ -84,6 +85,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
     let content = syntax::desugar(content.as_str());
+    if matches.get_one::<Printer>("printer") == Some(&Printer::DesugarDebug) {
+        return Printer::DesugarDebug.print(&content, iter::empty::<&str>());
+    }
     let nodes: Vec<_> = SegmentsScanner::new(content.as_str()).collect();
     let targets: Vec<_> = matches
         .get_many::<String>("target")
