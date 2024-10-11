@@ -2,6 +2,7 @@ use std::env;
 use std::fs;
 use std::io::{IsTerminal, Read};
 use std::iter;
+use std::path::PathBuf;
 
 use clap::{value_parser, Arg, Command};
 use glob::glob;
@@ -36,6 +37,11 @@ fn read_content_from_files(pattern: &str) -> Result<String, Box<dyn std::error::
     let mut files = Vec::new();
     let mut filenames: Vec<_> = glob(pattern).unwrap().filter_map(Result::ok).collect();
     if filenames.is_empty() {
+        let mut cwd = env::current_dir()?;
+        if cwd.pop() {
+            env::set_current_dir(cwd)?;
+            return read_content_from_files(pattern);
+        }
         return Err("no mkfiles found".into());
     }
     filenames.sort();
