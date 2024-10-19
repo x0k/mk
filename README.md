@@ -133,3 +133,18 @@ l/lib2/build:
 app: l/lib1/build l/lib2/build
     build app
 ```
+
+## Completions
+
+> [!NOTE]
+> Completions ignore the `input` argument.
+
+Source completions with `bash`:
+
+`echo "source <(COMPLETE=bash mk)" >> ~/.bashrc`
+
+For other shells see: [clap_complete](https://docs.rs/clap_complete/4.5.33/clap_complete/env/index.html)
+
+## License
+
+MIT
