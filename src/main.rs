@@ -2,9 +2,9 @@ use std::env;
 use std::fs;
 use std::io::{IsTerminal, Read};
 use std::iter;
-use std::path::PathBuf;
 
-use clap::{value_parser, Arg, Command};
+use clap::{value_parser, Arg, ArgAction, Command};
+use clap_complete::{generate, Shell, Generator};
 use glob::glob;
 use toml;
 
@@ -23,14 +23,20 @@ use segments_scanner::SegmentsScanner;
 
 const META: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/Cargo.toml"));
 
-fn parse_meta() -> Option<(&'static str, &'static str, &'static str)> {
+struct Meta {
+    name: &'static str,
+    description: &'static str,
+    version: &'static str,
+}
+
+fn parse_meta() -> Option<Meta> {
     let meta: &'static toml::Table = Box::leak(Box::new(toml::from_str(META).ok()?));
     let package = meta.get("package")?.as_table()?;
-    return Some((
-        package.get("name")?.as_str()?,
-        package.get("description")?.as_str()?,
-        package.get("version")?.as_str()?,
-    ));
+    return Some(Meta {
+        name: package.get("name")?.as_str()?,
+        description: package.get("description")?.as_str()?,
+        version: package.get("version")?.as_str()?,
+    });
 }
 
 fn read_content_from_files(pattern: &str) -> Result<String, Box<dyn std::error::Error>> {
@@ -54,11 +60,10 @@ fn read_content_from_files(pattern: &str) -> Result<String, Box<dyn std::error::
     Ok(files.join("\n"))
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let (name, description, version) = parse_meta().unwrap();
-    let matches = Command::new(name)
-        .version(version)
-        .about(description)
+fn build_cli(meta: &Meta) -> Command {
+    Command::new(meta.name)
+        .version(meta.version)
+        .about(meta.description)
         .arg(Arg::new("target").help("target segment(s)").num_args(0..))
         .arg(
             Arg::new("input")
@@ -74,12 +79,36 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .value_parser(value_parser!(Printer)),
         )
         .arg(
+            Arg::new("generate-completions")
+                .long("generate-completions")
+                .action(ArgAction::Set)
+                .value_parser(value_parser!(Shell)),
+        )
+        .arg(
             Arg::new("arguments")
                 .help("Arguments passed to the executable script")
                 .num_args(1..)
                 .last(true),
         )
-        .get_matches();
+}
+
+fn print_completions<G: Generator>(gen: G, cmd: &mut Command) {
+    generate(gen, cmd, cmd.get_name().to_string(), &mut std::io::stdout());
+}
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let meta = parse_meta().unwrap();
+    let matches = build_cli(&meta).get_matches();
+    if let Some(generator) = matches
+        .get_one::<Shell>("generate-completions")
+        .copied()
+    {
+        let mut cmd = build_cli(&meta);
+        eprintln!("Generating completion file for {generator}...");
+        print_completions(generator, &mut cmd);
+        return Ok(());
+    }
+
     let content = {
         let mut stdin = std::io::stdin();
         if stdin.is_terminal() {
