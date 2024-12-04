@@ -1,5 +1,4 @@
 use std::io::{IsTerminal, Read};
-use std::iter;
 
 mod chars;
 mod cli;
@@ -13,7 +12,6 @@ mod segments_scanner;
 mod syntax;
 
 use printer::Printer;
-use segments_scanner::SegmentsScanner;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let Some(matches) = cli::get_matches()? else {
@@ -30,27 +28,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
     let content = syntax::desugar(content.as_str());
-    if matches.get_one::<Printer>("printer") == Some(&Printer::DesugarDebug) {
-        return Printer::DesugarDebug.print(&content, iter::empty::<&str>());
-    }
-    let nodes: Vec<_> = SegmentsScanner::new(content.as_str()).collect();
+
+    let printer =
+        matches
+            .get_one::<Printer>("printer")
+            .unwrap_or(if std::io::stdout().is_terminal() {
+                &Printer::Executor
+            } else {
+                &Printer::Stdout
+            });
+    let args: Vec<&String> = matches.get_many("arguments").unwrap_or_default().collect();
     let targets: Vec<_> = matches
         .get_many::<String>("target")
         .unwrap_or_default()
         .map(|s| s.as_str())
         .collect();
-    match graph::resolve(&nodes, targets.as_slice()) {
-        Ok(content) => {
-            let printer = matches.get_one::<Printer>("printer").unwrap_or(
-                if std::io::stdout().is_terminal() {
-                    &Printer::Executor
-                } else {
-                    &Printer::Stdout
-                },
-            );
-            let args: Vec<&String> = matches.get_many("arguments").unwrap_or_default().collect();
-            printer.print(&content, args.as_slice())
-        }
-        Err(target) => Err(format!("target not found: {}", target).into()),
-    }
+    printer.print(targets.as_slice(), content.as_str(), args)
 }

@@ -1,9 +1,13 @@
 use std::{
-    env, error::Error, ffi::OsStr, io::Write, os::unix::fs::PermissionsExt, path::Path, process::Command
+    env, error::Error, ffi::OsStr, io::Write, os::unix::fs::PermissionsExt, path::Path,
+    process::Command,
 };
 
 use clap::ValueEnum;
 use rand::{distributions::Alphanumeric, Rng};
+
+use crate::graph;
+use crate::segments_scanner::SegmentsScanner;
 
 #[derive(Clone, ValueEnum, PartialEq)]
 pub enum Printer {
@@ -13,18 +17,21 @@ pub enum Printer {
 }
 
 impl Printer {
-    pub fn print<I, S>(&self, content: &str, args: I) -> Result<(), Box<dyn Error>>
+    pub fn print<I, S>(&self, targets: &[&str], content: &str, args: I) -> Result<(), Box<dyn Error>>
     where
         I: IntoIterator<Item = S>,
         S: AsRef<OsStr>,
     {
+        let nodes: Vec<_> = SegmentsScanner::new(content).collect();
+        let resolved = graph::resolve(&nodes, targets)
+            .map_err(|err| -> Box<dyn Error> { format!("target not found: {}", err).into() })?;
         match self {
-            Self::Stdout => {
-                print!("{}", content);
-                Ok(())
-            }
             Self::DesugarDebug => {
                 println!("{}", content);
+                Ok(())
+            }
+            Self::Stdout => {
+                print!("{}", resolved);
                 Ok(())
             }
             Self::Executor => {
@@ -40,7 +47,7 @@ impl Printer {
                     let mut permissions = file.metadata()?.permissions();
                     permissions.set_mode(0o755);
                     file.set_permissions(permissions)?;
-                    file.write_all(content.as_bytes())?;
+                    file.write_all(resolved.as_bytes())?;
                     file.flush()?;
                 }
                 Command::new(file_path).args(args).spawn()?.wait()?;
