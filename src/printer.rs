@@ -18,6 +18,10 @@ pub enum Printer {
     DesugarDebug,
 }
 
+fn target_not_found(target: &str) -> Box<dyn Error> {
+    format!("target not found: {}", target).into()
+}
+
 impl Printer {
     pub fn print<I, S>(
         &self,
@@ -36,31 +40,30 @@ impl Printer {
                 Ok(())
             }
             Self::Targets => {
-              for node in nodes {
-                if let Node::Segment { name, .. } = node {
-                  println!("{}", name);
-                  if let Some(desc) = node.description() {
-                    for line in desc {
-                      println!(" {}", line);
+                let segments =
+                    graph::resolve_segments(&nodes, targets).map_err(target_not_found)?;
+                for node in nodes {
+                    if let Node::Segment { name, .. } = node {
+                        if !segments.contains(name) {
+                            continue;
+                        }
+                        println!("{}", name);
+                        if let Some(desc) = node.description() {
+                            for line in desc {
+                                println!(" {}", line);
+                            }
+                        }
                     }
-                  }
                 }
-              }
-              Ok(())
+                Ok(())
             }
             Self::Stdout => {
-                let resolved =
-                    graph::resolve(&nodes, targets).map_err(|err| -> Box<dyn Error> {
-                        format!("target not found: {}", err).into()
-                    })?;
+                let resolved = graph::resolve(&nodes, targets).map_err(target_not_found)?;
                 print!("{}", resolved);
                 Ok(())
             }
             Self::Executor => {
-                let resolved =
-                    graph::resolve(&nodes, targets).map_err(|err| -> Box<dyn Error> {
-                        format!("target not found: {}", err).into()
-                    })?;
+                let resolved = graph::resolve(&nodes, targets).map_err(target_not_found)?;
                 let prefix: String = rand::thread_rng()
                     .sample_iter(&Alphanumeric)
                     .take(5)
