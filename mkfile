@@ -7,3 +7,7 @@ t:
 b:
     # Build binary
     cargo build
+
+h:
+    # Show help
+    mk --printer targets "*"
