@@ -1,5 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
+use glob::Pattern;
+
+use super::chars::*;
 use super::node::Node;
 
 fn make_graph<'a>(nodes: &[Node<'a>]) -> HashMap<&'a str, HashSet<&'a str>> {
@@ -38,14 +41,35 @@ fn resolve_targets<'a>(
     visited
 }
 
-pub fn resolve<'a>(nodes: &[Node<'a>], targets: &[&'a str]) -> Result<String, &'a str> {
+pub fn resolve_segments<'a>(
+    nodes: &[Node<'a>],
+    targets_or_patterns: &[&'a str],
+) -> Result<HashSet<&'a str>, &'a str> {
     let graph = make_graph(nodes);
-    for target in targets {
-        if !graph.contains_key(target) {
+    let mut targets = Vec::new();
+    for target in targets_or_patterns {
+        if graph.contains_key(target) {
+            targets.push(*target);
+            continue;
+        }
+        let old_size = targets.len();
+        if contains_glob_pattern_symbols(*target) {
+            let pattern = Pattern::new(*target).map_err(|_| *target)?;
+            for name in graph.keys() {
+                if pattern.matches(name) {
+                    targets.push(name);
+                }
+            }
+        }
+        if targets.len() == old_size {
             return Err(*target);
         }
     }
-    let segments = resolve_targets(&graph, targets);
+    Ok(resolve_targets(&graph, &targets))
+}
+
+pub fn resolve<'a>(nodes: &[Node<'a>], targets_or_patterns: &[&'a str]) -> Result<String, &'a str> {
+    let segments = resolve_segments(nodes, targets_or_patterns)?;
     let mut blocks = Vec::new();
     for node in nodes {
         match node {
