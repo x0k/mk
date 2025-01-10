@@ -1,4 +1,4 @@
-#!/usr/bin/bash -xe
+#!/usr/bin/env bash
 
 t:
     # Run tests
