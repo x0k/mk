@@ -7,7 +7,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     flake-utils.url = "github:numtide/flake-utils";
-    mk.url = "github:x0k/mk";
   };
 
   outputs =
@@ -16,7 +15,6 @@
       nixpkgs,
       fenix,
       flake-utils,
-      mk,
     }:
     flake-utils.lib.eachDefaultSystem (
       system:
@@ -42,7 +40,6 @@
         devShells.default = pkgs.mkShell {
           inherit nixpkgs;
           buildInputs = [
-            mk.packages.${system}.default
             f
           ];
         };
