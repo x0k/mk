@@ -4,7 +4,7 @@ use std::{
 };
 
 use clap::ValueEnum;
-use rand::{distributions::Alphanumeric, Rng};
+use rand::{distr::Alphanumeric, Rng};
 
 use crate::graph;
 use crate::node::Node;
@@ -64,7 +64,7 @@ impl Printer {
             }
             Self::Executor => {
                 let resolved = graph::resolve(&nodes, targets).map_err(target_not_found)?;
-                let prefix: String = rand::thread_rng()
+                let prefix: String = rand::rng()
                     .sample_iter(&Alphanumeric)
                     .take(5)
                     .map(char::from)
