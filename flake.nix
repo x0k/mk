@@ -29,14 +29,19 @@
           ];
       in
       {
-        packages.default = pkgs.rustPlatform.buildRustPackage {
-          pname = manifest.name;
-          version = manifest.version;
-          cargoLock = {
-            lockFile = ./Cargo.lock;
-          };
-          src = pkgs.lib.cleanSource ./.;
-        };
+        packages.default =
+          (pkgs.makeRustPlatform {
+            cargo = f;
+            rustc = f;
+          }).buildRustPackage
+            {
+              pname = manifest.name;
+              version = manifest.version;
+              cargoLock = {
+                lockFile = ./Cargo.lock;
+              };
+              src = pkgs.lib.cleanSource ./.;
+            };
         devShells.default = pkgs.mkShell {
           inherit nixpkgs;
           buildInputs = [
