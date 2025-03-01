@@ -2,7 +2,7 @@
 name = "mk"
 description = "Text preprocessor for content segmentation"
 version = "0.1.8"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 clap = { version = "4.5.31", features = ["derive"] }

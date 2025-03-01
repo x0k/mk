@@ -4,10 +4,10 @@ use std::io::{IsTerminal, Read};
 
 use clap::ArgMatches;
 use clap::ValueHint;
-use clap::{value_parser, Arg, ArgAction, Command};
+use clap::{Arg, ArgAction, Command, value_parser};
 use clap_complete::engine::{ArgValueCompleter, CompletionCandidate};
 use clap_complete::env::CompleteEnv;
-use clap_complete::{generate, Generator, Shell};
+use clap_complete::{Generator, Shell, generate};
 use glob::glob;
 
 use super::node::Node;
@@ -62,8 +62,7 @@ fn targets_completer(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
     let content = {
         let mut stdin = std::io::stdin();
         if stdin.is_terminal() {
-            read_content_from_files(DEFAULT_INPUT)
-                .unwrap_or_default()
+            read_content_from_files(DEFAULT_INPUT).unwrap_or_default()
         } else {
             let mut input = String::new();
             stdin.read_to_string(&mut input).unwrap_or_default();
@@ -123,8 +122,8 @@ fn build_cli(meta: &Meta) -> Command {
         )
 }
 
-fn print_completions<G: Generator>(gen: G, cmd: &mut Command) {
-    generate(gen, cmd, cmd.get_name().to_string(), &mut std::io::stdout());
+fn print_completions<G: Generator>(g: G, cmd: &mut Command) {
+    generate(g, cmd, cmd.get_name().to_string(), &mut std::io::stdout());
 }
 
 pub fn get_matches() -> Result<Option<ArgMatches>, Box<dyn std::error::Error>> {

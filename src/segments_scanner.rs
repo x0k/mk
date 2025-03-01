@@ -511,9 +511,7 @@ rsync -rL ../doppio/build/release/ public/doppio --delete\n"
                         indentation: "  ",
                         dependencies: vec![],
                     },
-                    Node::Content(
-                        "bun run dev\npopd",
-                    ),
+                    Node::Content("bun run dev\npopd",),
                 ]
         );
     }

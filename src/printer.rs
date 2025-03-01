@@ -4,7 +4,7 @@ use std::{
 };
 
 use clap::ValueEnum;
-use rand::{distr::Alphanumeric, Rng};
+use rand::{Rng, distr::Alphanumeric};
 
 use crate::graph;
 use crate::node::Node;
