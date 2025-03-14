@@ -2,6 +2,7 @@
   description = "Simple text preprocessor for content segmentation";
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-24.11";
+    nixpkgsUnstable.url = "github:nixos/nixpkgs?ref=nixos-unstable";
     fenix = {
       url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -13,6 +14,7 @@
     {
       self,
       nixpkgs,
+      nixpkgsUnstable,
       fenix,
       flake-utils,
     }:
@@ -20,12 +22,12 @@
       system:
       let
         pkgs = import nixpkgs { inherit system; };
+        pkgsUnstable = import nixpkgsUnstable { inherit system; };
         manifest = (pkgs.lib.importTOML ./Cargo.toml).package;
         f =
           with fenix.packages.${system};
           combine [
             stable.toolchain
-            # targets.wasm32-unknown-unknown.stable.rust-std
           ];
       in
       {
@@ -33,6 +35,7 @@
           (pkgs.makeRustPlatform {
             cargo = f;
             rustc = f;
+            cargo-auditable = pkgsUnstable.cargo-auditable;
           }).buildRustPackage
             {
               pname = manifest.name;
