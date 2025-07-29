@@ -82,8 +82,11 @@ impl<'a> SegmentsScanner<'a> {
         let content = &self.content[self.cursor..];
         for (i, c) in content.char_indices() {
             if i == 0 && !c.is_alphabetic() {
-                self.cursor += 1;
-                return false;
+                if let Some(i) = find_new_line_index(content) {
+                    self.cursor += i + 1;
+                    return false;
+                }
+                break;
             }
             if c == '\n' {
                 self.cursor += i + 1;
@@ -324,6 +327,13 @@ mod iterator_tests {
     fn should_emit_empty_content() {
         let scanner = SegmentsScanner::new("");
         assert!(collect(scanner) == vec![Node::Content("")]);
+    }
+
+    #[test]
+    fn should_emit_only_segment() {
+        let scanner = SegmentsScanner::new("# NOTE: note\nexport DATA");
+        let collected = collect(scanner);
+        assert!(collected == vec![Node::Content("# NOTE: note\nexport DATA")])
     }
 
     #[test]
