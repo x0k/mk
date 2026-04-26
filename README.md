@@ -77,13 +77,13 @@ foo:
 
 group/:
     pushd folder
-    
+
     bar: /foo
         bar segment content
-    
+
     baz: bar
         baz segment content
-    
+
     popd
 ```
 
@@ -144,6 +144,10 @@ Source completions with `bash`:
 `echo "source <(COMPLETE=bash mk)" >> ~/.bashrc`
 
 For other shells see: [clap_complete](https://docs.rs/clap_complete/4.5.33/clap_complete/env/index.html)
+
+## Community
+
+- [Discord](https://discord.gg/hVxFWk7dRn)
 
 ## License
 
