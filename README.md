@@ -106,6 +106,50 @@ group:
     popd
 ```
 
+### Templates
+
+- `@template name:` defines a reusable content template without parameters.
+- `@template name parameter:` defines a template with one parameter.
+- `@use name` inserts a template without arguments.
+- `@use name value` inserts a template and replaces every occurrence of `parameter` in its body with `value`.
+- Only one parameter per template is supported.
+- The value is the rest of the line after the template name. Leading and trailing whitespace is ignored, internal spaces are preserved, so it can contain spaces without quotes.
+- Parameter replacement is literal. Choose distinctive parameter names that do not appear elsewhere in the template body.
+- Templates can use other templates with `@use`.
+- Template definitions cannot be nested.
+- Parenthesized definitions and uses like `@template name(parameter):` and `@use name(value)` are reserved for a future multi-argument syntax.
+
+```bash
+@template tasks:
+    c:
+        pnpm run check
+    b:
+        pnpm run build
+
+@template package package_dir:
+    pushd package_dir
+    @use tasks
+    popd
+
+basic/:
+    @use package packages/basic-theme
+```
+
+Desugared:
+
+```makefile
+basic:
+    pushd packages/basic-theme
+basic/c: basic
+    pnpm run check
+basic/b: basic
+    pnpm run build
+basic:
+    popd
+```
+
+Template names and parameters can contain letters, digits, and underscores, and must start with a letter or underscore. A parameter value is inserted verbatim; it can include quotes, commas, parentheses, and shell variables.
+
 ### Glob pattern in dependencies list
 
 - [glob implementation](https://docs.rs/glob/latest/glob/struct.Pattern.html).

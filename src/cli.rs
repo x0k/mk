@@ -69,7 +69,7 @@ fn targets_completer(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
             input
         }
     };
-    let content = syntax::desugar(content.as_str());
+    let content = syntax::desugar(content.as_str()).unwrap_or_default();
     SegmentsScanner::new(content.as_str())
         .filter_map(|node| match node {
             Node::Content(_) => None,

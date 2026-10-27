@@ -10,6 +10,7 @@ mod node;
 mod printer;
 mod segments_scanner;
 mod syntax;
+mod templates;
 
 use printer::Printer;
 
@@ -27,7 +28,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             input
         }
     };
-    let content = syntax::desugar(content.as_str());
+    let content = syntax::desugar(content.as_str())?;
 
     let printer =
         matches
